@@ -1,0 +1,420 @@
+/* ============================================================
+   BHIMA ESPORTS — ANIMATION SYSTEM
+   ============================================================ */
+
+/* ── Core Animations ─────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes scaleDown {
+  from { opacity: 0; transform: scale(1.1); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Continuous Animations ───────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .5; }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(215,255,0,.2), 0 0 20px rgba(215,255,0,.1); }
+  50%      { box-shadow: 0 0 15px rgba(215,255,0,.4), 0 0 40px rgba(215,255,0,.2); }
+}
+
+@keyframes textGlow {
+  0%, 100% { text-shadow: 0 0 4px rgba(215,255,0,.2); }
+  50%      { text-shadow: 0 0 12px rgba(215,255,0,.4), 0 0 24px rgba(215,255,0,.15); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+/* ── Particle Animations ────────────────────────────────── */
+@keyframes particleFloat {
+  0% {
+    transform: translateY(100vh) translateX(0) scale(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(90vh) translateX(10px) scale(1);
+  }
+  90% {
+    opacity: .6;
+  }
+  100% {
+    transform: translateY(-10vh) translateX(-20px) scale(.5);
+    opacity: 0;
+  }
+}
+
+@keyframes particleDrift {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(30px, -25px) rotate(90deg);
+  }
+  50% {
+    transform: translate(-10px, -50px) rotate(180deg);
+  }
+  75% {
+    transform: translate(20px, -75px) rotate(270deg);
+  }
+  100% {
+    transform: translate(0px, -100px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* ── Nav Underline Slide ─────────────────────────────────── */
+@keyframes underlineSlide {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@keyframes underlineGlow {
+  0%, 100% { box-shadow: 0 0 4px rgba(215,255,0,.3); }
+  50%      { box-shadow: 0 0 8px rgba(215,255,0,.6); }
+}
+
+/* ── Counter / Number Animation ──────────────────────────── */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Leaderboard Rank Changes ────────────────────────────── */
+@keyframes rankUp {
+  0%   { background: rgba(0,255,136,.15); }
+  100% { background: transparent; }
+}
+
+@keyframes rankDown {
+  0%   { background: rgba(255,68,68,.1); }
+  100% { background: transparent; }
+}
+
+@keyframes rankHighlight {
+  0%   { box-shadow: inset 3px 0 0 var(--neon); background: rgba(215,255,0,.05); }
+  100% { box-shadow: inset 3px 0 0 transparent; background: transparent; }
+}
+
+/* ── Confetti ────────────────────────────────────────────── */
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-100%) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes confettiSpin {
+  0%   { transform: rotateX(0) rotateY(0); }
+  25%  { transform: rotateX(180deg) rotateY(90deg); }
+  50%  { transform: rotateX(360deg) rotateY(180deg); }
+  75%  { transform: rotateX(180deg) rotateY(270deg); }
+  100% { transform: rotateX(0) rotateY(360deg); }
+}
+
+.confetti-piece {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  top: -10px;
+  z-index: 1000;
+  animation: confettiFall 3s ease-in-out forwards;
+}
+
+/* ── Scanline HUD Effect ─────────────────────────────────── */
+@keyframes scanline {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.scanline-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.scanline-overlay::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(215,255,0,.06), transparent);
+  animation: scanline 4s linear infinite;
+}
+
+/* ── Logo Pulse (Loading) ────────────────────────────────── */
+@keyframes logoPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.05);
+    filter: brightness(1.3);
+  }
+}
+
+@keyframes logoGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(215,255,0,.2));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(215,255,0,.5));
+  }
+}
+
+/* ── Loading Spinner ─────────────────────────────────────── */
+@keyframes spinnerRotate {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spinnerDash {
+  0%   { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+  50%  { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+  100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--neon);
+  border-radius: 50%;
+  animation: spinnerRotate .8s linear infinite;
+}
+
+.loading-spinner-sm {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+/* ── Page Transitions ────────────────────────────────────── */
+.page-enter {
+  animation: fadeIn .4s ease, slideUp .4s ease;
+}
+
+.page-exit {
+  animation: fadeOut .2s ease forwards;
+}
+
+/* ── Hero Animations ─────────────────────────────────────── */
+@keyframes heroTextReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(40px);
+    filter: blur(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes heroLineExpand {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@keyframes gridLineH {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: .03; }
+}
+
+@keyframes gridLineV {
+  from { transform: scaleY(0); opacity: 0; }
+  to   { transform: scaleY(1); opacity: .03; }
+}
+
+/* ── Stagger Utilities ───────────────────────────────────── */
+.animate-in {
+  animation: slideUp .5s ease both;
+}
+
+.stagger-1  { animation-delay: 0.05s; }
+.stagger-2  { animation-delay: 0.10s; }
+.stagger-3  { animation-delay: 0.15s; }
+.stagger-4  { animation-delay: 0.20s; }
+.stagger-5  { animation-delay: 0.25s; }
+.stagger-6  { animation-delay: 0.30s; }
+.stagger-7  { animation-delay: 0.35s; }
+.stagger-8  { animation-delay: 0.40s; }
+.stagger-9  { animation-delay: 0.45s; }
+.stagger-10 { animation-delay: 0.50s; }
+
+/* Animation utility classes */
+.anim-fade-in   { animation: fadeIn .5s ease both; }
+.anim-slide-up  { animation: slideUp .5s ease both; }
+.anim-slide-down { animation: slideDown .5s ease both; }
+.anim-slide-left { animation: slideInLeft .5s ease both; }
+.anim-slide-right { animation: slideInRight .5s ease both; }
+.anim-scale-up  { animation: scaleUp .4s ease both; }
+.anim-float     { animation: float 3s ease-in-out infinite; }
+.anim-pulse     { animation: pulse 2s infinite; }
+.anim-glow      { animation: glow 2s infinite; }
+.anim-bounce    { animation: bounce 1s infinite; }
+.anim-spin      { animation: spin 1s linear infinite; }
+
+/* Hover animation triggers */
+.hover-lift {
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.hover-glow {
+  transition: box-shadow var(--transition-base);
+}
+.hover-glow:hover {
+  box-shadow: var(--shadow-neon);
+}
+
+.hover-scale {
+  transition: transform var(--transition-fast);
+}
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+/* ── Entrance Animations (for scroll-trigger) ────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity .6s ease, transform .6s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Typewriter Effect ───────────────────────────────────── */
+@keyframes typewriter {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+
+@keyframes blink {
+  50% { border-color: transparent; }
+}
+
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid var(--neon);
+  animation: typewriter 2s steps(30) forwards, blink .8s step-end infinite;
+}
+
+/* ── Gradient text animation ─────────────────────────────── */
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--neon), #fff, var(--neon));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 3s ease infinite;
+}
+
+/* ── Mobile Nav Animations ───────────────────────────────── */
+@keyframes mobileNavSlideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes mobileNavSlideOut {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
+}
+
+/* Hamburger animation */
+.hamburger-line {
+  transition: all var(--transition-base);
+}
+
+.hamburger.open .hamburger-line:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger.open .hamburger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.open .hamburger-line:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+/* ── Reduced Motion ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
