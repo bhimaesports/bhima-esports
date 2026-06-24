@@ -2,7 +2,10 @@
    BHIMA ESPORTS — API Utility
    ============================================================ */
 
-const BASE_URL = '/api';
+const BASE_URL =
+  import.meta.env.MODE === 'development'
+    ? '/api'
+    : 'https://bhima-esports-api.onrender.com/api';
 
 let authToken = null;
 
