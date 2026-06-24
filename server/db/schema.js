@@ -149,6 +149,11 @@ function createTables(database) {
       wins INTEGER DEFAULT 0,
       matches_played INTEGER DEFAULT 0,
       mvp_awards INTEGER DEFAULT 0,
+      total_damage INTEGER DEFAULT 0,
+      headshot_percentage REAL DEFAULT 0,
+      average_survival_time REAL DEFAULT 0,
+      total_points INTEGER DEFAULT 0,
+      booyahs INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (department_id) REFERENCES departments(id),
       FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
@@ -200,6 +205,22 @@ function createTables(database) {
       kill_points INTEGER DEFAULT 0,
       total_points INTEGER DEFAULT 0,
       FOREIGN KEY (match_id) REFERENCES matches(id),
+      FOREIGN KEY (team_id) REFERENCES teams(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS player_results (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      match_id INTEGER NOT NULL,
+      player_id INTEGER NOT NULL,
+      team_id INTEGER NOT NULL,
+      kills INTEGER DEFAULT 0,
+      damage INTEGER DEFAULT 0,
+      headshots INTEGER DEFAULT 0,
+      survival_time REAL DEFAULT 0,
+      points INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (match_id) REFERENCES matches(id),
+      FOREIGN KEY (player_id) REFERENCES players(id),
       FOREIGN KEY (team_id) REFERENCES teams(id)
     );
 
@@ -404,8 +425,21 @@ export async function initializeDatabase() {
     }
   }
 
+  const playerCols = [
+    { name: 'total_damage', type: 'INTEGER DEFAULT 0' },
+    { name: 'headshot_percentage', type: 'REAL DEFAULT 0' },
+    { name: 'average_survival_time', type: 'REAL DEFAULT 0' },
+    { name: 'total_points', type: 'INTEGER DEFAULT 0' },
+    { name: 'booyahs', type: 'INTEGER DEFAULT 0' }
+  ];
+  for (const col of playerCols) {
+    try {
+      db.run(`ALTER TABLE players ADD COLUMN ${col.name} ${col.type}`);
+    } catch (e) {}
+  }
+
   db.saveToFile();
-  console.log('✅ Migrated database: added advanced columns to certificates table');
+  console.log('✅ Migrated database: added advanced columns to certificates & players tables');
   return db;
 }
 

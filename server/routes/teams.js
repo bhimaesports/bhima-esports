@@ -255,4 +255,70 @@ router.patch('/:id/status', authenticate, (req, res) => {
   }
 });
 
+// GET /api/teams/:id/analytics - get detailed analytics for a team
+router.get('/:id/analytics', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+    
+    // Fetch base team info
+    const team = db.get(
+      `SELECT t.*, d.name as department_name, tl.total_points, tl.matches, tl.wins, tl.total_kills, tl.current_rank
+       FROM teams t
+       LEFT JOIN departments d ON t.department_id = d.id
+       LEFT JOIN team_leaderboard tl ON t.id = tl.team_id
+       WHERE t.id = ?`,
+      [Number(id)]
+    );
+
+    if (!team) {
+      return res.status(404).json({ error: 'Team not found.' });
+    }
+
+    // Fetch players
+    const players = db.all('SELECT * FROM players WHERE team_id = ? ORDER BY kills DESC', [Number(id)]);
+
+    // Fetch match results for graph (Match Results Timeline, Points Growth)
+    const matchHistory = db.all(
+      `SELECT r.rank, r.kills, r.total_points, r.placement_points, r.kill_points, m.match_number, m.date, tn.name as tournament_name
+       FROM results r
+       JOIN matches m ON r.match_id = m.id
+       JOIN tournaments tn ON m.tournament_id = tn.id
+       WHERE r.team_id = ?
+       ORDER BY m.date ASC, m.match_number ASC`,
+      [Number(id)]
+    );
+
+    // Calculate progression data for graphs
+    let cumulativePoints = 0;
+    const pointsProgression = matchHistory.map((m, index) => {
+      cumulativePoints += m.total_points;
+      return {
+        name: `M${index + 1}`,
+        points: m.total_points,
+        cumulative: cumulativePoints,
+        kills: m.kills,
+        rank: m.rank,
+        tournament: m.tournament_name
+      };
+    });
+
+    const killDistribution = players.map(p => ({
+      name: p.name,
+      kills: p.kills,
+      damage: p.total_damage || 0
+    }));
+
+    res.json({
+      team,
+      players,
+      matchHistory: pointsProgression,
+      killDistribution
+    });
+  } catch (err) {
+    console.error('Team analytics error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
 export default router;

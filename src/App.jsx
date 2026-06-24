@@ -18,7 +18,9 @@ import CertificateVerify from './pages/CertificateVerify';
 import Dashboard from './pages/Admin/Dashboard';
 import AdminRegistrations from './pages/Admin/AdminRegistrations';
 import AdminTeams from './pages/Admin/AdminTeams';
+import TeamDetails from './pages/Admin/TeamDetails';
 import AdminPlayers from './pages/Admin/AdminPlayers';
+import PlayerProfile from './pages/Admin/PlayerProfile';
 import AdminTournaments from './pages/Admin/AdminTournaments';
 import AdminMatchResults from './pages/Admin/AdminMatchResults';
 import AdminLeaderboards from './pages/Admin/AdminLeaderboards';
@@ -56,7 +58,9 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="registrations" element={<AdminRegistrations />} />
           <Route path="teams" element={<AdminTeams />} />
+          <Route path="teams/:id" element={<TeamDetails />} />
           <Route path="players" element={<AdminPlayers />} />
+          <Route path="players/:id" element={<PlayerProfile />} />
           <Route path="tournaments" element={<AdminTournaments />} />
           <Route path="match-results" element={<AdminMatchResults />} />
           <Route path="leaderboards" element={<AdminLeaderboards />} />

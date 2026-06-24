@@ -263,4 +263,57 @@ router.patch('/:id/transfer', authenticate, (req, res) => {
   }
 });
 
+// GET /api/players/:id/analytics - get detailed analytics for a player
+router.get('/:id/analytics', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+
+    const player = db.get(
+      `SELECT p.*, d.name as department_name, t.name as team_name, t.team_id as team_code
+       FROM players p
+       LEFT JOIN departments d ON p.department_id = d.id
+       LEFT JOIN teams t ON p.team_id = t.id
+       WHERE p.id = ?`,
+      [Number(id)]
+    );
+
+    if (!player) {
+      return res.status(404).json({ error: 'Player not found.' });
+    }
+
+    // Fetch match results for graph (Kills Per Match, Points Progression)
+    const matchHistory = db.all(
+      `SELECT pr.kills, pr.damage, pr.headshots, pr.survival_time, pr.points, m.match_number, m.date, tn.name as tournament_name
+       FROM player_results pr
+       JOIN matches m ON pr.match_id = m.id
+       JOIN tournaments tn ON m.tournament_id = tn.id
+       WHERE pr.player_id = ?
+       ORDER BY m.date ASC, m.match_number ASC`,
+      [Number(id)]
+    );
+
+    let cumulativePoints = 0;
+    const killsProgression = matchHistory.map((m, index) => {
+      cumulativePoints += m.points;
+      return {
+        name: `M${index + 1}`,
+        kills: m.kills,
+        damage: m.damage,
+        points: m.points,
+        cumulative: cumulativePoints,
+        tournament: m.tournament_name
+      };
+    });
+
+    res.json({
+      player,
+      matchHistory: killsProgression
+    });
+  } catch (err) {
+    console.error('Player analytics error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
 export default router;

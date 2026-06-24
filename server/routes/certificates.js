@@ -314,7 +314,7 @@ router.put('/:id', authenticate, (req, res) => {
     const db = getDb();
     const { id } = req.params;
     const {
-      player_name, roll_number, team_name, department, tournament_name, tournament_date,
+      cert_id, player_name, roll_number, team_name, department, tournament_name, tournament_date,
       title, description_text, signature_name, signature_designation, signature_name_2, signature_designation_2,
       signature_image, signature_image_2, colors, typography, logo_url, logo_size, logo_position,
       seal_url, watermark_text, border_design, qr_code_enabled, sponsor_logos, position, award_type, template_id, status
@@ -327,13 +327,14 @@ router.put('/:id', authenticate, (req, res) => {
 
     db.run(`
       UPDATE certificates SET
-        player_name = ?, roll_number = ?, team_name = ?, department = ?, tournament_name = ?, tournament_date = ?,
+        cert_id = ?, player_name = ?, roll_number = ?, team_name = ?, department = ?, tournament_name = ?, tournament_date = ?,
         title = ?, description_text = ?, signature_name = ?, signature_designation = ?, signature_name_2 = ?,
         signature_designation_2 = ?, signature_image = ?, signature_image_2 = ?, colors = ?, typography = ?,
         logo_url = ?, logo_size = ?, logo_position = ?, seal_url = ?, watermark_text = ?, border_design = ?,
         qr_code_enabled = ?, sponsor_logos = ?, position = ?, award_type = ?, template_id = ?, status = ?
       WHERE id = ?
     `, [
+      cert_id !== undefined ? cert_id : cert.cert_id,
       player_name !== undefined ? player_name : cert.player_name,
       roll_number !== undefined ? roll_number : cert.roll_number,
       team_name !== undefined ? team_name : cert.team_name,

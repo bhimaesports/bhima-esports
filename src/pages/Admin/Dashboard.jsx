@@ -40,20 +40,21 @@ export default function Dashboard() {
         gap: 'var(--space-4)',
       }}>
         {[
-          { label: 'Pending Registrations', value: stats.registrations?.pending || 0, icon: '📋', color: 'var(--warning)' },
-          { label: 'Active Teams', value: stats.teams?.active || 0, icon: '👥', color: 'var(--neon)' },
+          { label: 'Total Teams', value: stats.teams?.total || 0, icon: '👥', color: 'var(--neon)' },
           { label: 'Total Players', value: stats.players?.total || 0, icon: '🎮', color: 'var(--text)' },
-          { label: 'Open Tournaments', value: stats.tournaments?.open || 0, icon: '🏆', color: 'var(--info)' },
-          { label: 'Total Certificates', value: stats.certificates || 0, icon: '📜', color: 'var(--neon)' },
+          { label: 'Total Tournaments', value: stats.tournaments?.total || 0, icon: '🏆', color: 'var(--info)' },
+          { label: 'Total Registrations', value: stats.registrations?.total || 0, icon: '📋', color: 'var(--warning)' },
+          { label: 'Total Matches', value: stats.matches?.total || 0, icon: '⚔️', color: 'var(--error)' },
+          { label: 'Certificates Issued', value: stats.certificates || 0, icon: '📜', color: 'var(--neon)' },
         ].map((s, idx) => (
           <Card key={idx} style={{ border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{s.label}</span>
-              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: s.color, marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+              <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 900, color: s.color, marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
                 {s.value}
               </div>
             </div>
-            <div style={{ fontSize: '2rem' }}>{s.icon}</div>
+            <div style={{ fontSize: '2.5rem', opacity: 0.8 }}>{s.icon}</div>
           </Card>
         ))}
       </div>
@@ -98,30 +99,43 @@ export default function Dashboard() {
           )}
         </Card>
 
-        {/* Recent System Logs */}
+        {/* Recent Activity Feed */}
         <Card style={{ border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <h3 style={{ textTransform: 'uppercase', fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--text)' }}>
-            🔒 Recent Admin Actions
+          <h3 style={{ textTransform: 'uppercase', fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--neon)' }}>
+            ⚡ Recent Activity
           </h3>
           {recentLogs.length === 0 ? (
-            <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>No activity logs recorded.</p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>No recent activity.</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', maxHeight: '300px', overflowY: 'auto' }}>
-              {recentLogs.map((log) => (
-                <div key={log.id} style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--border)', paddingBottom: 'var(--space-2)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--neon)', fontFamily: 'var(--font-mono)' }}>
-                      {log.action}
-                    </strong>
-                    <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
-                      {formatDate(log.timestamp)}
-                    </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', maxHeight: '400px', overflowY: 'auto', paddingRight: '4px' }}>
+              {recentLogs.map((log) => {
+                let icon = '📌';
+                if (log.action.includes('TEAM')) icon = '🛡️';
+                if (log.action.includes('PLAYER')) icon = '👤';
+                if (log.action.includes('TOURNAMENT')) icon = '🏆';
+                if (log.action.includes('CERTIFICATE')) icon = '📜';
+
+                return (
+                  <div key={log.id} style={{ display: 'flex', gap: '12px', borderBottom: '1px solid var(--border)', paddingBottom: 'var(--space-3)' }}>
+                    <div style={{ fontSize: '24px', background: 'var(--bg-lighter)', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
+                      {icon}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--text)' }}>
+                          {log.action.replace(/_/g, ' ')}
+                        </strong>
+                        <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
+                          {formatDate(log.timestamp)}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.4 }}>
+                        {log.details}
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                    {log.details}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>

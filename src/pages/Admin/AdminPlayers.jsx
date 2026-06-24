@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../utils/api';
 import Button from '../../components/UI/Button';
 import Card from '../../components/UI/Card';
@@ -260,7 +261,15 @@ export default function AdminPlayers() {
               {players.map((p) => (
                 <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td>
-                    <div style={{ fontWeight: 700 }}>{p.name}</div>
+                    <div style={{ fontWeight: 700 }}>
+                      <Link 
+                        to={`/admin/players/${p.id}`} 
+                        style={{ color: 'var(--neon)', textDecoration: 'none' }}
+                        className="hover-underline"
+                      >
+                        {p.name}
+                      </Link>
+                    </div>
                     <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
                       UID: {p.uid || '—'} • Roll: {p.roll_number || '—'}
                     </span>

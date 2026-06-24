@@ -516,6 +516,7 @@ export default function AdminCertificates() {
   const handleOpenEditCertModal = (cert) => {
     setEditingCert(cert);
     setIssueForm({
+      cert_id: cert.cert_id || '',
       player_name: cert.player_name || '',
       roll_number: cert.roll_number || '',
       team_name: cert.team_name || '',
@@ -1956,135 +1957,193 @@ export default function AdminCertificates() {
         }}>
           <div className="glass-dark" style={{
             width: '100%',
-            maxWidth: '550px',
+            maxWidth: '1200px',
             borderRadius: 'var(--radius-lg)',
             border: '1px solid var(--border)',
             padding: 'var(--space-6)',
             maxHeight: '90vh',
-            overflowY: 'auto'
+            overflowY: 'auto',
+            display: 'grid',
+            gridTemplateColumns: 'minmax(400px, 1fr) minmax(500px, 1.5fr)',
+            gap: 'var(--space-6)'
           }}>
-            <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, textTransform: 'uppercase', color: 'var(--neon)', marginBottom: '16px' }}>
-              📝 Edit Certificate Fields
-            </h2>
-            <div style={{ marginBottom: '16px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-              ID: <strong>{editingCert?.cert_id}</strong>
+            {/* Left: Form */}
+            <div>
+              <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, textTransform: 'uppercase', color: 'var(--neon)', marginBottom: '16px' }}>
+                📝 Edit Certificate Fields
+              </h2>
+              
+              <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="form-label">Certificate ID</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    value={issueForm.cert_id}
+                    onChange={(e) => setIssueForm(prev => ({ ...prev, cert_id: e.target.value }))}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Player Full Name</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    value={issueForm.player_name}
+                    onChange={(e) => setIssueForm(prev => ({ ...prev, player_name: e.target.value }))}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Roll Number</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={issueForm.roll_number}
+                      onChange={(e) => setIssueForm(prev => ({ ...prev, roll_number: e.target.value }))}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Team Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={issueForm.team_name}
+                      onChange={(e) => setIssueForm(prev => ({ ...prev, team_name: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Department</label>
+                    <select
+                      className="form-input"
+                      value={issueForm.department}
+                      onChange={(e) => setIssueForm(prev => ({ ...prev, department: e.target.value }))}
+                    >
+                      <option value="">Select Department...</option>
+                      {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Award Type</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={issueForm.award_type}
+                      onChange={(e) => setIssueForm(prev => ({ ...prev, award_type: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Tournament Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={issueForm.tournament_name}
+                      onChange={(e) => setIssueForm(prev => ({ ...prev, tournament_name: e.target.value }))}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Tournament Date</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={issueForm.tournament_date}
+                      onChange={(e) => setIssueForm(prev => ({ ...prev, tournament_date: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Position</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={issueForm.position}
+                      onChange={(e) => setIssueForm(prev => ({ ...prev, position: e.target.value }))}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Title Header</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={issueForm.title}
+                      onChange={(e) => setIssueForm(prev => ({ ...prev, title: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Description Text</label>
+                  <textarea
+                    className="form-input"
+                    rows="3"
+                    value={issueForm.description_text}
+                    onChange={(e) => setIssueForm(prev => ({ ...prev, description_text: e.target.value }))}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
+                  <Button type="button" variant="outline" onClick={() => setEditModalOpen(false)}>Cancel</Button>
+                  <Button type="submit" variant="primary" disabled={actionLoading}>
+                    {actionLoading ? 'Updating...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </form>
             </div>
 
-            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div className="form-group">
-                <label className="form-label">Player Full Name</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  required
-                  value={issueForm.player_name}
-                  onChange={(e) => setIssueForm(prev => ({ ...prev, player_name: e.target.value }))}
+            {/* Right: Live Preview */}
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '12px',
+              borderLeft: '1px solid var(--border)',
+              paddingLeft: 'var(--space-6)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 700, color: 'var(--text-secondary)' }}>Live Preview</h3>
+                <span style={{ fontSize: '10px', background: 'var(--neon)', color: '#000', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>AUTO-UPDATES</span>
+              </div>
+              <div style={{ 
+                flex: 1, 
+                background: 'rgba(0,0,0,0.5)', 
+                borderRadius: 'var(--radius-md)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                overflow: 'hidden',
+                border: '1px solid var(--border)',
+                position: 'relative'
+              }}
+              ref={(node) => {
+                // Auto-scale the preview to fit container
+                if (node && node.firstElementChild) {
+                  const scale = Math.min(
+                    (node.clientWidth - 40) / 1000,
+                    (node.clientHeight - 40) / 700
+                  );
+                  node.firstElementChild.style.transform = `scale(${scale})`;
+                  node.firstElementChild.style.transformOrigin = 'center center';
+                }
+              }}
+              >
+                <div 
+                  dangerouslySetInnerHTML={{ 
+                    __html: renderCertHTMLForPDF({ ...editingCert, ...issueForm }) 
+                  }} 
                 />
               </div>
+            </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label className="form-label">Roll Number</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={issueForm.roll_number}
-                    onChange={(e) => setIssueForm(prev => ({ ...prev, roll_number: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Team Name</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={issueForm.team_name}
-                    onChange={(e) => setIssueForm(prev => ({ ...prev, team_name: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label className="form-label">Department</label>
-                  <select
-                    className="form-input"
-                    value={issueForm.department}
-                    onChange={(e) => setIssueForm(prev => ({ ...prev, department: e.target.value }))}
-                  >
-                    <option value="">Select Department...</option>
-                    {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Award Type</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={issueForm.award_type}
-                    onChange={(e) => setIssueForm(prev => ({ ...prev, award_type: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label className="form-label">Tournament Name</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={issueForm.tournament_name}
-                    onChange={(e) => setIssueForm(prev => ({ ...prev, tournament_name: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Tournament Date</label>
-                  <input
-                    type="date"
-                    className="form-input"
-                    value={issueForm.tournament_date}
-                    onChange={(e) => setIssueForm(prev => ({ ...prev, tournament_date: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label className="form-label">Position</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={issueForm.position}
-                    onChange={(e) => setIssueForm(prev => ({ ...prev, position: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Title Header</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={issueForm.title}
-                    onChange={(e) => setIssueForm(prev => ({ ...prev, title: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Description Text</label>
-                <textarea
-                  className="form-input"
-                  rows="3"
-                  value={issueForm.description_text}
-                  onChange={(e) => setIssueForm(prev => ({ ...prev, description_text: e.target.value }))}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
-                <Button type="button" variant="outline" onClick={() => setEditModalOpen(false)}>Cancel</Button>
-                <Button type="submit" variant="primary" disabled={actionLoading}>
-                  {actionLoading ? 'Updating...' : 'Save Changes'}
-                </Button>
-              </div>
-            </form>
           </div>
         </div>
       )}
