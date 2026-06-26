@@ -24,78 +24,116 @@ export default function Footer() {
       background: 'var(--bg-secondary)',
       padding: '3rem 0 1.5rem',
     }}>
+      <style>{`
+        .footer-grid {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 3rem;
+          margin-bottom: 3rem;
+        }
+        .footer-brand {
+          flex: 1;
+          max-width: 500px;
+        }
+        .footer-brand-logo {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          margin-bottom: 1rem;
+        }
+        .footer-links {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          text-align: right;
+        }
+        .footer-bottom {
+          border-top: 1px solid var(--border);
+          padding-top: 1.5rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 1rem;
+        }
+        @media (max-width: 768px) {
+          .footer-grid {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 2.5rem;
+          }
+          .footer-brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+          }
+          .footer-brand-logo {
+            justify-content: center;
+          }
+          .footer-links {
+            align-items: center;
+            text-align: center;
+          }
+          .footer-bottom {
+            justify-content: center;
+            text-align: center;
+          }
+        }
+      `}</style>
       <div className="container">
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '2rem',
-          marginBottom: '2rem',
-        }}>
+        <div className="footer-grid">
           {/* Brand */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-              <img src="/assets/logo.png" alt="Bhima Esports" style={{ height: 36, width: 36, objectFit: 'contain' }} />
+          <div className="footer-brand">
+            <div className="footer-brand-logo">
+              <img src="/assets/logo.png" alt="Bhima Esports" style={{ height: 42, width: 42, objectFit: 'contain' }} />
               <span style={{
                 fontFamily: 'var(--font-heading)',
                 fontWeight: 800,
-                fontSize: 'var(--text-base)',
+                fontSize: '1.25rem',
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
               }}>
                 <span style={{ color: 'var(--neon)' }}>BHIMA</span> ESPORTS
               </span>
             </div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', maxWidth: 280, lineHeight: 1.7 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: 320, lineHeight: 1.7, margin: 0 }}>
               The premier inter-department esports tournament platform. Compete, dominate, and claim glory.
             </p>
           </div>
 
           {/* Quick Links */}
-          <div>
+          <div className="footer-links">
             <h4 style={{
               fontFamily: 'var(--font-mono)',
-              fontSize: 'var(--text-xs)',
+              fontSize: '0.85rem',
               textTransform: 'uppercase',
               letterSpacing: '0.1em',
               color: 'var(--text-secondary)',
-              marginBottom: '1rem',
+              marginBottom: '1.25rem',
             }}>
               Quick Links
             </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {QUICK_LINKS.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
                   style={{
-                    fontSize: 'var(--text-sm)',
-                    color: 'var(--text-secondary)',
-                    transition: 'color 0.2s',
+                    fontSize: '0.95rem',
+                    color: 'var(--text)',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    transition: 'all 0.2s',
                   }}
-                  onMouseEnter={(e) => { e.target.style.color = 'var(--neon)'; }}
-                  onMouseLeave={(e) => { e.target.style.color = 'var(--text-secondary)'; }}
+                  onMouseEnter={(e) => { e.target.style.color = 'var(--neon)'; e.target.style.paddingLeft = '5px'; }}
+                  onMouseLeave={(e) => { e.target.style.color = 'var(--text)'; e.target.style.paddingLeft = '0px'; }}
                 >
                   {link.label}
                 </Link>
               ))}
-            </div>
-          </div>
-
-          {/* Info */}
-          <div>
-            <h4 style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 'var(--text-xs)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              color: 'var(--text-secondary)',
-              marginBottom: '1rem',
-            }}>
-              Tournament Info
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-              <span>📍 UCEOU, Bhima Hostel</span>
-              <span>🎮 FreeFire • Bgmi • Cod</span>
             </div>
           </div>
         </div>
@@ -106,8 +144,7 @@ export default function Footer() {
             display: 'flex',
             justifyContent: 'center',
             marginBottom: '2rem',
-            paddingBottom: '1.5rem',
-            borderBottom: '1px solid rgba(255,255,255,0.05)',
+            paddingBottom: '2rem',
           }}>
             <a 
               href={instagramUrl} 
@@ -120,21 +157,24 @@ export default function Footer() {
                 color: 'var(--text)',
                 background: 'rgba(215,255,0,0.05)',
                 border: '1px solid rgba(215,255,0,0.1)',
-                padding: '0.5rem 1.25rem',
+                padding: '0.6rem 1.5rem',
                 borderRadius: 'var(--radius-full)',
-                fontSize: 'var(--text-sm)',
+                fontSize: '0.9rem',
                 fontWeight: 600,
                 transition: 'all 0.2s',
+                textDecoration: 'none'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(215,255,0,0.1)';
+                e.currentTarget.style.background = 'rgba(215,255,0,0.15)';
                 e.currentTarget.style.color = 'var(--neon)';
-                e.currentTarget.style.borderColor = 'rgba(215,255,0,0.3)';
+                e.currentTarget.style.borderColor = 'rgba(215,255,0,0.4)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'rgba(215,255,0,0.05)';
                 e.currentTarget.style.color = 'var(--text)';
                 e.currentTarget.style.borderColor = 'rgba(215,255,0,0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -148,18 +188,10 @@ export default function Footer() {
         )}
 
         {/* Bottom bar */}
-        <div style={{
-          borderTop: '1px solid var(--border)',
-          paddingTop: '1.5rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '0.75rem',
-        }}>
+        <div className="footer-bottom">
           <span style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '0.6875rem',
+            fontSize: '0.75rem',
             color: 'var(--text-dim)',
             letterSpacing: '0.04em',
           }}>
@@ -167,7 +199,7 @@ export default function Footer() {
           </span>
           <span style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '0.6875rem',
+            fontSize: '0.75rem',
             color: 'var(--text-dim)',
             letterSpacing: '0.04em',
           }}>
