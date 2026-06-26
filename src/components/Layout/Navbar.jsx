@@ -9,7 +9,6 @@ import FlashNews from './FlashNews';
 const NAV_LINKS = [
   { path: '/', label: 'Home' },
   { path: '/tournaments', label: 'Tournaments' },
-  { path: '/schedule', label: 'Schedule' },
   { path: '/teams', label: 'Teams' },
   { path: '/players', label: 'Players' },
   { path: '/leaderboard', label: 'Leaderboard' },
@@ -174,46 +173,56 @@ export default function Navbar({ toggleTheme }) {
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', paddingRight: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingRight: '1rem' }}>
                 <Link
                   to="/login"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.5rem',
-                    fontFamily: "'Rajdhani', sans-serif",
-                    fontSize: '0.95rem',
-                    fontWeight: 800,
-                    color: '#000',
-                    textDecoration: 'none'
+                    justifyContent: 'center',
+                    padding: '0.6rem 1.5rem',
+                    background: '#000',
+                    color: '#FFF',
+                    fontFamily: "'Orbitron', sans-serif",
+                    fontSize: '0.9rem',
+                    fontWeight: 900,
+                    textTransform: 'uppercase',
+                    textDecoration: 'none',
+                    borderRadius: '4px',
+                    border: '1px solid var(--neon)',
+                    transition: 'all 0.3s ease',
                   }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = 'var(--neon)'; e.currentTarget.style.color = '#000'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = '#000'; e.currentTarget.style.color = '#FFF'; }}
                 >
-                  <span style={{ background: '#000', color: 'var(--neon)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 900, pointerEvents: 'none' }}>👤</span>
-                  Log-in
+                  LOGIN
+                </Link>
+                
+                <Link
+                  to="/register"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0.6rem 1.5rem',
+                    background: 'var(--neon)',
+                    color: '#000',
+                    fontFamily: "'Orbitron', sans-serif",
+                    fontSize: '0.9rem',
+                    fontWeight: 900,
+                    textTransform: 'uppercase',
+                    textDecoration: 'none',
+                    borderRadius: '4px',
+                    border: '1px solid var(--neon)',
+                    transition: 'all 0.3s ease',
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.03)'; e.currentTarget.style.filter = 'brightness(0.9)'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.filter = 'brightness(1)'; }}
+                >
+                  REGISTER
                 </Link>
               </div>
             )}
-
-            {/* Black Block CTA Button */}
-            <Link
-              to="/tournament-register"
-              style={{
-                background: '#000',
-                color: '#FFF',
-                height: '100%',
-                padding: '0 2.5rem',
-                fontFamily: "'Orbitron', sans-serif",
-                fontSize: '1rem',
-                fontWeight: 900,
-                textTransform: 'uppercase',
-                textDecoration: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                letterSpacing: '1px'
-              }}
-            >
-              REGISTER NOW
-            </Link>
           </div>
 
           {/* Mobile Hamburger */}
@@ -231,9 +240,9 @@ export default function Navbar({ toggleTheme }) {
             }}
             aria-label="Open menu"
           >
-            <span className="hamburger-line" style={{ width: 24, height: 2, background: 'var(--text)', borderRadius: 1, display: 'block', transition: 'all 0.3s ease' }} />
-            <span className="hamburger-line" style={{ width: 24, height: 2, background: 'var(--text)', borderRadius: 1, display: 'block', transition: 'all 0.3s ease' }} />
-            <span className="hamburger-line" style={{ width: 24, height: 2, background: 'var(--text)', borderRadius: 1, display: 'block', transition: 'all 0.3s ease' }} />
+            <span className="hamburger-line" style={{ width: 24, height: 2, background: '#000', borderRadius: 1, display: 'block', transition: 'all 0.3s ease' }} />
+            <span className="hamburger-line" style={{ width: 24, height: 2, background: '#000', borderRadius: 1, display: 'block', transition: 'all 0.3s ease' }} />
+            <span className="hamburger-line" style={{ width: 24, height: 2, background: '#000', borderRadius: 1, display: 'block', transition: 'all 0.3s ease' }} />
           </button>
         </div>
       </motion.nav>

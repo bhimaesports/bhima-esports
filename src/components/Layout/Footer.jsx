@@ -96,7 +96,6 @@ export default function Footer() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
               <span>📍 UCEOU, Bhima Hostel</span>
               <span>🎮 FreeFire • Bgmi • Cod</span>
-              <span>🏆 8 Departments</span>
             </div>
           </div>
         </div>

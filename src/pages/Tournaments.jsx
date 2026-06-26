@@ -277,164 +277,25 @@ export default function Tournaments() {
               </div>
 
               <div style={{ display: 'flex', gap: 'var(--space-2)', padding: 'var(--space-4)', background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative', zIndex: 1 }}>
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedTournament(t)}
-                  style={{ 
-                    flex: 1, 
-                    borderRadius: 0, 
-                    clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
-                    fontFamily: 'var(--font-heading)'
-                  }}
-                >
-                  INFO
-                </Button>
-                {t.status === 'open' && (t.registered_count || 0) < (t.team_slots || 0) ? (
-                  <Link to="/register" style={{ flex: 1, textDecoration: 'none' }}>
-                    <Button variant="primary" style={{ 
-                      width: '100%',
-                      borderRadius: 0,
-                      clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
-                      fontFamily: 'var(--font-heading)',
-                      textTransform: 'uppercase',
-                      fontWeight: 800
-                    }}>
-                      REGISTER
-                    </Button>
-                  </Link>
-                ) : (
-                  <Button variant="outline" disabled style={{ 
-                    flex: 1,
+                <Link to={`/tournaments/${t.id}`} style={{ flex: 1, textDecoration: 'none' }}>
+                  <Button variant="primary" style={{ 
+                    width: '100%',
                     borderRadius: 0,
                     clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
                     fontFamily: 'var(--font-heading)',
-                    opacity: 0.5
+                    textTransform: 'uppercase',
+                    fontWeight: 800
                   }}>
-                    {t.status === 'open' ? 'FULL' : 'CLOSED'}
+                    VIEW DETAILS
                   </Button>
-                )}
+                </Link>
               </div>
             </motion.div>
           ))}
         </motion.div>
       )}
 
-      {/* Rules Modal */}
-      <AnimatePresence>
-        {selectedTournament && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0,0,0,0.9)',
-              backdropFilter: 'blur(10px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 'var(--z-modal)',
-              padding: 'var(--space-4)',
-            }}
-          >
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              style={{
-                width: '100%',
-                maxWidth: '600px',
-                background: '#050505',
-                border: '1px solid var(--neon)',
-                clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)',
-                padding: 'var(--space-6)',
-                maxHeight: '85vh',
-                overflowY: 'auto',
-                position: 'relative'
-              }}
-            >
-              {/* Decorative corner */}
-              <div style={{
-                position: 'absolute',
-                top: 0, right: 0, width: '40px', height: '40px',
-                borderRight: '2px solid var(--neon)',
-                borderTop: '2px solid var(--neon)',
-              }} />
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-6)' }}>
-                <h2 style={{ 
-                  fontSize: 'var(--text-2xl)', 
-                  fontWeight: 900, 
-                  textTransform: 'uppercase', 
-                  color: 'var(--neon)',
-                  fontFamily: 'var(--font-heading)',
-                  letterSpacing: '0.05em'
-                }}>
-                  {selectedTournament.name} <br/>
-                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontWeight: 400 }}>// DATALOG //</span>
-                </h2>
-                <button
-                  onClick={() => setSelectedTournament(null)}
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: 'var(--text)',
-                    width: '32px',
-                    height: '32px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--neon)'}
-                  onMouseOut={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', color: 'var(--text-secondary)', fontFamily: 'var(--font-body)' }}>
-                <div>
-                  <h4 style={{ color: 'var(--text)', marginBottom: 'var(--space-2)', fontFamily: 'var(--font-heading)', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }}>
-                    Prize Details
-                  </h4>
-                  <p style={{ fontSize: 'var(--text-md)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                    {selectedTournament.prize_details || 'WILL BE ANNOUNCED SHORTLY.'}
-                  </p>
-                </div>
-
-                <div>
-                  <h4 style={{ color: 'var(--text)', marginBottom: 'var(--space-2)', fontFamily: 'var(--font-heading)', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }}>
-                    Tournament Rules
-                  </h4>
-                  <p style={{ fontSize: 'var(--text-md)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                    {selectedTournament.rules || 'STANDARD RULES APPLY. PLAY FAIR AND RESPECT COMPETITORS.'}
-                  </p>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--space-4)' }}>
-                  <Button 
-                    variant="primary" 
-                    onClick={() => setSelectedTournament(null)}
-                    style={{
-                      borderRadius: 0,
-                      clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
-                      fontFamily: 'var(--font-heading)',
-                      fontWeight: 800,
-                      textTransform: 'uppercase'
-                    }}
-                  >
-                    ACKNOWLEDGE
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }

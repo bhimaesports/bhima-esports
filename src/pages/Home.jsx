@@ -124,31 +124,40 @@ export default function Home() {
           <source src={heroSlides[currentSlide]?.bgImage || "/assets/hero-bg.mp4"} type="video/mp4" />
         </video>
 
-        {/* Dark Overlay for Readability & Tactical Grid */}
+        {/* Dark Overlay for Readability */}
         <div style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(10, 10, 10, 0.85)', /* Heavy dark overlay to make yellow pop */
+          background: 'linear-gradient(rgba(5,5,5,0.7), rgba(5,5,5,0.95))',
           zIndex: 1
         }}></div>
+
+        {/* Diagonal Line Overlay (Restored & Enhanced) */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: `repeating-linear-gradient(45deg, rgba(215,255,0,0.15) 0, rgba(215,255,0,0.15) 1px, transparent 1px, transparent 12px)`,
+          zIndex: 2, pointerEvents: 'none',
+        }}></div>
+
+
 
         {/* Tactical White/Grey Dots Grid Overlay */}
         <div style={{
           position: 'absolute', inset: 0,
-          backgroundImage: 'radial-gradient(rgba(255,255,255,0.15) 1px, transparent 1px)',
+          backgroundImage: 'radial-gradient(rgba(255,255,255,0.2) 1px, transparent 1px)',
           backgroundSize: '40px 40px',
           zIndex: 2, pointerEvents: 'none'
         }}></div>
 
         {/* Left Yellow Chevrons */}
         <div style={{
-          position: 'absolute', top: 0, bottom: '80px', left: 0, width: '300px',
+          position: 'absolute', top: 0, bottom: '80px', left: 0, width: 'clamp(60px, 15vw, 300px)',
           background: 'repeating-linear-gradient(135deg, var(--neon), var(--neon) 20px, transparent 20px, transparent 40px)',
           clipPath: 'polygon(0 0, 100% 0, 60% 100%, 0 100%)',
           opacity: 1, zIndex: 3
         }}></div>
 
-        <div className="container-lg" style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0 1rem' }}>
+        <div className="container-lg" style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0 1rem', flex: 1, justifyContent: 'center' }}>
           
           <motion.div
             key={currentSlide}
@@ -160,7 +169,7 @@ export default function Home() {
             {/* Title (Like PUBG ESPORTS 2026) */}
             <h2 style={{ 
               fontFamily: "'Orbitron', sans-serif", 
-              fontSize: 'clamp(2rem, 4vw, 4rem)', 
+              fontSize: 'clamp(1.5rem, 4vw, 4rem)', 
               fontWeight: 900, 
               color: 'var(--neon)', 
               textTransform: 'uppercase', 
@@ -174,7 +183,7 @@ export default function Home() {
             {/* Main Massive Subtitle (Like ROAD TO PGC) */}
             <h1 style={{ 
               fontFamily: "'Rajdhani', sans-serif", 
-              fontSize: 'clamp(4rem, 10vw, 12rem)', 
+              fontSize: 'clamp(2.5rem, 10vw, 12rem)', 
               fontWeight: 900, 
               color: '#FFFFFF', 
               textTransform: 'uppercase', 
@@ -187,11 +196,11 @@ export default function Home() {
             </h1>
             <h1 style={{ 
               fontFamily: "'Rajdhani', sans-serif", 
-              fontSize: 'clamp(4rem, 10vw, 12rem)', 
+              fontSize: 'clamp(2.5rem, 10vw, 12rem)', 
               fontWeight: 900, 
               color: '#FFFFFF', 
               textTransform: 'uppercase', 
-              margin: '-1rem 0 2rem 0',
+              margin: '-0.5rem 0 2rem 0',
               lineHeight: '1',
               letterSpacing: '-0.02em',
               textShadow: '0 10px 30px rgba(0,0,0,0.5)'
@@ -201,31 +210,39 @@ export default function Home() {
           </motion.div>
 
         </div>
-
-        {/* 4-Box Yellow Info Ticker Bar (Absolute Bottom of Hero) */}
-        <div style={{
-          position: 'absolute',
-          bottom: 0, left: 0, right: 0,
-          background: 'var(--neon)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '1px', /* Thin border lines between boxes */
-          borderTop: '1px solid rgba(0,0,0,0.1)',
-          zIndex: 10
-        }}>
-          {[
-            { title: 'BHIMA Esports Season 1', sub: 'Registrations are now open!' },
-            { title: 'Tournament Hub', sub: 'Explore ongoing battles' },
-            { title: 'Leaderboards Live', sub: 'Check current player standings' },
-            { title: 'Join the Community', sub: 'New challengers arriving' }
-          ].map((box, i) => (
-            <div key={i} style={{ background: 'var(--neon)', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid rgba(0,0,0,0.1)' }}>
-               <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 800, color: '#000', fontSize: '1rem', marginBottom: '0.25rem', lineHeight: 1.2 }}>{box.title}</span>
-               <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: '0.9rem', color: '#333', fontWeight: 600 }}>{box.sub}</span>
-            </div>
-          ))}
-        </div>
       </section>
+
+      {/* 4-Box Yellow Info Ticker Bar (Moved OUTSIDE Hero) */}
+      <div style={{
+        position: 'relative',
+        width: '100%',
+        background: 'var(--neon)',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '1px', /* Thin border lines between boxes */
+        borderBottom: '1px solid rgba(0,0,0,0.1)',
+        zIndex: 10
+      }}>
+        {[
+          { title: 'BHIMA Esports Season 1', sub: 'Registrations are now open!' },
+          { title: 'Tournament Hub', sub: 'Explore ongoing battles' },
+          { title: 'Leaderboards Live', sub: 'Check current player standings' },
+          { title: 'Join the Community', sub: 'New challengers arriving' }
+        ].map((box, i) => (
+          <div key={i} style={{ 
+            background: 'var(--neon)', 
+            padding: '0.5rem 1.2rem', 
+            height: 'clamp(60px, 10vw, 90px)',
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'center', 
+            borderRight: '1px solid rgba(0,0,0,0.1)' 
+          }}>
+             <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 800, color: '#000', fontSize: 'clamp(0.85rem, 1.2vw, 1rem)', marginBottom: '0.15rem', lineHeight: 1.1 }}>{box.title}</span>
+             <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 'clamp(0.75rem, 1vw, 0.9rem)', color: '#333', fontWeight: 700 }}>{box.sub}</span>
+          </div>
+        ))}
+      </div>
 
       <div className="container-lg" style={{ padding: '4rem 1rem', display: 'grid', gridTemplateColumns: '1fr', gap: '4rem' }}>
         
