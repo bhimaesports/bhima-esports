@@ -13,6 +13,13 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const handleClose = () => {
+    setUsername('');
+    setPassword('');
+    setError('');
+    navigate('/');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -32,7 +39,35 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="page-wrapper" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className="page-wrapper" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+      
+      {/* Top Right Close Button */}
+      <button
+        onClick={handleClose}
+        style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          width: '44px',
+          height: '44px',
+          background: 'transparent',
+          border: 'none',
+          color: '#FFF',
+          fontSize: '1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          transition: 'color 0.3s ease',
+          zIndex: 1000
+        }}
+        onMouseOver={(e) => e.currentTarget.style.color = 'var(--neon)'}
+        onMouseOut={(e) => e.currentTarget.style.color = '#FFF'}
+        aria-label="Close Admin Login"
+      >
+        ✕
+      </button>
+
       <div className="container" style={{ maxWidth: 500 }}>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card glow={true}>
