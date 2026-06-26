@@ -33,10 +33,7 @@ export default function Leaderboard() {
       } else if (activeTab === 'matches') {
         const data = await api.get('/matches');
         const matchData = data.matches || data || [];
-        setMatches(matchData);
-        if (matchData.length > 0 && !selectedMatchId) {
-          setSelectedMatchId(matchData[0].id.toString());
-        }
+        setMatches(matchData.filter(m => m.published === 1));
       }
     } catch (err) {
       console.error(err);
@@ -310,15 +307,22 @@ export default function Leaderboard() {
   return (
     <motion.div 
       className="page-wrapper container" 
-      style={{ paddingTop: '120px', paddingBottom: 'var(--space-16)', backgroundColor: '#000000', minHeight: '100vh' }}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      style={{ paddingTop: 'var(--space-12)', paddingBottom: 'var(--space-16)' }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
       <div className="section-header" style={{ marginBottom: 'var(--space-8)' }}>
-        <motion.div initial={{ width: 0 }} animate={{ width: '40px' }} className="accent-line" />
-        <h1 style={{ fontFamily: 'var(--font-heading)', textTransform: 'uppercase', fontStyle: 'italic', letterSpacing: '2px', color: '#FFF' }}>Leaderboard</h1>
-        <p style={{ fontFamily: 'var(--font-body)', color: 'var(--text-secondary)' }}>Real-time team standings and player rankings of Bhima Hostel.</p>
+        <motion.div 
+          className="accent-line" 
+          initial={{ width: 0 }}
+          animate={{ width: '40px' }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        />
+        <h1 style={{ fontFamily: 'var(--font-heading)', textTransform: 'uppercase', color: 'var(--text)' }}>Leaderboard</h1>
+        <p style={{ fontFamily: 'var(--font-body)', color: 'var(--text-secondary)' }}>
+          Real-time team standings and player rankings of Bhima Hostel.
+        </p>
       </div>
 
       {/* Tabs */}
@@ -377,73 +381,90 @@ export default function Leaderboard() {
           {activeTab === 'players' && renderTop3Highlights(playersLb)}
 
           {activeTab === 'matches' && (
-            <motion.div variants={rowVariants} style={{ background: '#F5F5F5', padding: '2rem', borderRadius: '8px', color: '#000' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2rem' }}>
-                <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.5rem' }}>Latest game</h2>
-                <select 
-                  value={selectedMatchId} 
-                  onChange={e => setSelectedMatchId(e.target.value)}
-                  style={{ 
-                    background: 'transparent', 
-                    border: 'none', 
-                    borderBottom: '2px solid rgba(0,0,0,0.2)', 
-                    padding: '0.5rem 1rem', 
-                    fontFamily: 'var(--font-mono)', 
-                    fontSize: '1rem', 
-                    fontWeight: 600,
-                    outline: 'none',
-                    cursor: 'pointer',
-                    textAlign: 'center'
-                  }}
-                >
+            <motion.div variants={rowVariants} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              {matches.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>NO MATCHES PUBLISHED YET</div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
                   {matches.map(m => (
-                    <option key={m.id} value={m.id}>
-                      {m.tournament_name || 'TOURNAMENT'} - MATCH {m.match_number}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Table Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem 1.5rem', color: '#888', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
-                <div style={{ width: '80px', textAlign: 'center' }}>RANK</div>
-                <div style={{ flex: 1, paddingLeft: '1rem' }}>TEAM</div>
-                <div style={{ width: '80px', textAlign: 'center' }}>TOTAL</div>
-              </div>
-
-              {/* Table Rows */}
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {activeMatch && activeMatch.results && activeMatch.results.length > 0 ? (
-                  activeMatch.results.map((res, index) => {
-                    const isFirst = index === 0;
-                    return (
-                      <div key={res.team_id} style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        padding: '1rem 1.5rem', 
-                        background: isFirst ? '#E8F54A' : '#FFF', // Highlight first row with Krafton yellow
-                        borderBottom: '1px solid rgba(0,0,0,0.05)',
-                        fontFamily: 'var(--font-heading)',
-                        color: '#000'
-                      }}>
-                        <div style={{ width: '80px', textAlign: 'center', fontWeight: 900, fontSize: '1.1rem' }}>#{res.rank}</div>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '1rem', paddingLeft: '1rem' }}>
-                          <div style={{ width: '30px', height: '30px', background: '#FFF', border: '1px solid rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {res.team_logo ? <img src={res.team_logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : '🛡️'}
-                          </div>
-                          <div style={{ fontWeight: 800, fontSize: '1.1rem', textTransform: 'uppercase' }}>{res.team_name}</div>
+                    <motion.div key={m.id} whileHover={{ y: -5 }} style={{ background: '#0A0A0A', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ position: 'relative', height: '180px', background: '#111' }}>
+                        {m.poster_url ? (
+                          <img src={m.poster_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#333', fontSize: '3rem' }}>🏆</div>
+                        )}
+                        <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.8)', border: '1px solid var(--neon)', color: 'var(--neon)', padding: '4px 8px', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', borderRadius: '4px' }}>
+                          {m.status}
                         </div>
-                        <div style={{ width: '80px', textAlign: 'center', fontWeight: 900, fontSize: '1.1rem' }}>{res.total_points}</div>
                       </div>
-                    );
-                  })
-                ) : (
-                  <div style={{ padding: '3rem', textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>NO RESULTS RECORDED YET</div>
-                )}
-              </div>
+                      <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <div>
+                          <div style={{ color: 'var(--neon)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>{m.game || 'TOURNAMENT MATCH'}</div>
+                          <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, textTransform: 'uppercase', fontFamily: 'var(--font-heading)' }}>{m.match_name || `MATCH ${m.match_number}`}</h3>
+                          <div style={{ color: '#888', fontSize: '0.8rem', marginTop: '4px' }}>{m.date ? formatDate(m.date) : 'TBA'} {m.time ? `• ${m.time}` : ''}</div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.65rem', color: '#888', textTransform: 'uppercase', fontWeight: 800 }}>Winner</div>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#FFF' }}>{m.winning_team_name || '-'}</div>
+                          </div>
+                          <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.65rem', color: '#888', textTransform: 'uppercase', fontWeight: 800 }}>MVP</div>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--neon)' }}>{m.mvp_in_game_name || m.mvp_player_name || '-'}</div>
+                          </div>
+                        </div>
+                        <Button variant="outline" style={{ width: '100%', marginTop: 'auto' }} onClick={() => setSelectedMatchId(m.id.toString())}>View Full Results</Button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
+
+          {/* Matches Modal */}
+          <AnimatePresence>
+            {activeTab === 'matches' && activeMatch && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} style={{ background: '#0A0A0A', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: '#0A0A0A', zIndex: 10 }}>
+                    <div>
+                      <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900, textTransform: 'uppercase', fontFamily: 'var(--font-heading)', color: 'var(--neon)' }}>{activeMatch.match_name || `MATCH ${activeMatch.match_number}`}</h2>
+                      <div style={{ fontSize: '0.85rem', color: '#888' }}>{activeMatch.tournament_name}</div>
+                    </div>
+                    <button onClick={() => setSelectedMatchId('')} style={{ background: 'none', border: 'none', color: '#FFF', fontSize: '1.5rem', cursor: 'pointer' }}>✕</button>
+                  </div>
+                  <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 1rem', color: '#888', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div style={{ width: '50px', textAlign: 'center' }}>Rank</div>
+                      <div style={{ flex: 1, paddingLeft: '1rem' }}>Team</div>
+                      <div style={{ width: '60px', textAlign: 'center' }}>Kills</div>
+                      <div style={{ width: '60px', textAlign: 'center' }}>Total</div>
+                    </div>
+                    {activeMatch.results && activeMatch.results.length > 0 ? (
+                      activeMatch.results.map((res, index) => (
+                        <div key={res.team_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: index === 0 ? 'rgba(215,255,0,0.05)' : 'transparent', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ width: '50px', textAlign: 'center', fontWeight: 900, fontSize: '1.1rem', color: index === 0 ? 'var(--neon)' : '#FFF' }}>#{res.rank}</div>
+                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '1rem', paddingLeft: '1rem' }}>
+                            <div style={{ width: '30px', height: '30px', background: '#111', border: index === 0 ? '1px solid var(--neon)' : '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {res.team_logo ? <img src={res.team_logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : '🛡️'}
+                            </div>
+                            <div style={{ fontWeight: 800, fontSize: '1rem', textTransform: 'uppercase', color: index === 0 ? 'var(--neon)' : '#FFF' }}>{res.team_name}</div>
+                          </div>
+                          <div style={{ width: '60px', textAlign: 'center', fontWeight: 600, color: '#888' }}>{res.kills}</div>
+                          <div style={{ width: '60px', textAlign: 'center', fontWeight: 900, fontSize: '1.1rem', color: index === 0 ? 'var(--neon)' : '#FFF' }}>{res.total_points}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: '3rem', textAlign: 'center', color: '#888', fontWeight: 600 }}>NO RESULTS RECORDED YET</div>
+                    )}
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {activeTab !== 'matches' && (
           <div style={{ width: '100%', paddingBottom: '2rem' }}>

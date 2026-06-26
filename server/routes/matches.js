@@ -16,12 +16,18 @@ const router = Router();
 router.get('/', (req, res) => {
   try {
     const db = getDb();
-    const { tournament_id, status, page = 1, limit = 50 } = req.query;
+    const { tournament_id, status, game, month, year, search, page = 1, limit = 50 } = req.query;
 
     let sql = `
-      SELECT m.*, tn.name as tournament_name
+      SELECT m.*, tn.name as tournament_name, 
+             wt.name as winning_team_name, wt.logo_url as winning_team_logo,
+             rt.name as runner_up_team_name,
+             mp.real_name as mvp_player_name, mp.in_game_name as mvp_in_game_name
       FROM matches m
       LEFT JOIN tournaments tn ON m.tournament_id = tn.id
+      LEFT JOIN teams wt ON m.winning_team_id = wt.id
+      LEFT JOIN teams rt ON m.runner_up_team_id = rt.id
+      LEFT JOIN players mp ON m.mvp_player_id = mp.id
       WHERE 1=1
     `;
     const params = [];
@@ -34,11 +40,29 @@ router.get('/', (req, res) => {
       sql += ' AND m.status = ?';
       params.push(status);
     }
+    if (game) {
+      sql += ' AND m.game = ?';
+      params.push(game);
+    }
+    if (month && year) {
+      const formattedMonth = month.padStart(2, '0');
+      sql += ' AND m.date LIKE ?';
+      params.push(`${year}-${formattedMonth}-%`);
+    } else if (year) {
+      sql += ' AND m.date LIKE ?';
+      params.push(`${year}-%`);
+    }
 
-    const countSql = sql.replace(/SELECT m\.\*.*FROM/, 'SELECT COUNT(*) as total FROM');
+    if (search) {
+      sql += ` AND (m.match_name LIKE ? OR tn.name LIKE ? OR wt.name LIKE ? OR mp.in_game_name LIKE ?)`;
+      const searchParam = `%${search}%`;
+      params.push(searchParam, searchParam, searchParam, searchParam);
+    }
+
+    const countSql = sql.replace(/SELECT m\.\*.*FROM/s, 'SELECT COUNT(*) as total FROM');
     const total = db.get(countSql, params)?.total || 0;
 
-    sql += ' ORDER BY m.match_number ASC LIMIT ? OFFSET ?';
+    sql += ' ORDER BY m.date DESC, m.match_number DESC LIMIT ? OFFSET ?';
     const offset = (Number(page) - 1) * Number(limit);
     params.push(Number(limit), offset);
 
@@ -75,7 +99,11 @@ router.get('/', (req, res) => {
 router.post('/', authenticate, upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'poster', maxCount: 1 }]), (req, res) => {
   try {
     const db = getDb();
-    const { tournament_id, match_number, date, time, venue, description, status } = req.body;
+    const { 
+      tournament_id, match_name, match_number, game, date, time, venue, 
+      description, status, winning_team_id, runner_up_team_id, mvp_player_id, 
+      notes, highlights_url, published 
+    } = req.body;
 
     if (!tournament_id || !match_number) {
       return res.status(400).json({ error: 'Tournament ID and Match Number are required.' });
@@ -85,16 +113,27 @@ router.post('/', authenticate, upload.fields([{ name: 'thumbnail', maxCount: 1 }
     const poster_url = req.files?.poster ? `/uploads/${req.files.poster[0].filename}` : null;
 
     db.run(
-      `INSERT INTO matches (tournament_id, match_number, date, time, venue, description, status, thumbnail_url, poster_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO matches (
+        tournament_id, match_name, match_number, game, date, time, venue, 
+        description, status, winning_team_id, runner_up_team_id, mvp_player_id, 
+        notes, highlights_url, published, thumbnail_url, poster_url
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         Number(tournament_id),
+        match_name || null,
         Number(match_number),
+        game || null,
         date || null,
         time || null,
         venue || null,
         description || null,
         status || 'upcoming',
+        winning_team_id ? Number(winning_team_id) : null,
+        runner_up_team_id ? Number(runner_up_team_id) : null,
+        mvp_player_id ? Number(mvp_player_id) : null,
+        notes || null,
+        highlights_url || null,
+        published !== undefined ? Number(published) : 1,
         thumbnail_url,
         poster_url
       ]
@@ -239,7 +278,11 @@ router.put('/:id', authenticate, upload.fields([{ name: 'thumbnail', maxCount: 1
   try {
     const db = getDb();
     const { id } = req.params;
-    const { tournament_id, match_number, date, time, venue, description, status } = req.body;
+    const { 
+      tournament_id, match_name, match_number, game, date, time, venue, 
+      description, status, winning_team_id, runner_up_team_id, mvp_player_id, 
+      notes, highlights_url, published 
+    } = req.body;
 
     const match = db.get('SELECT * FROM matches WHERE id = ?', [Number(id)]);
     if (!match) {
@@ -251,16 +294,26 @@ router.put('/:id', authenticate, upload.fields([{ name: 'thumbnail', maxCount: 1
 
     db.run(
       `UPDATE matches SET
-         tournament_id = ?, match_number = ?, date = ?, time = ?, venue = ?, description = ?, status = ?, thumbnail_url = ?, poster_url = ?
+         tournament_id = ?, match_name = ?, match_number = ?, game = ?, date = ?, time = ?, venue = ?, 
+         description = ?, status = ?, winning_team_id = ?, runner_up_team_id = ?, mvp_player_id = ?, 
+         notes = ?, highlights_url = ?, published = ?, thumbnail_url = ?, poster_url = ?
        WHERE id = ?`,
       [
         tournament_id ? Number(tournament_id) : match.tournament_id,
+        match_name !== undefined ? match_name : match.match_name,
         match_number ? Number(match_number) : match.match_number,
+        game !== undefined ? game : match.game,
         date !== undefined ? date : match.date,
         time !== undefined ? time : match.time,
         venue !== undefined ? venue : match.venue,
         description !== undefined ? description : match.description,
         status || match.status,
+        winning_team_id !== undefined ? (winning_team_id ? Number(winning_team_id) : null) : match.winning_team_id,
+        runner_up_team_id !== undefined ? (runner_up_team_id ? Number(runner_up_team_id) : null) : match.runner_up_team_id,
+        mvp_player_id !== undefined ? (mvp_player_id ? Number(mvp_player_id) : null) : match.mvp_player_id,
+        notes !== undefined ? notes : match.notes,
+        highlights_url !== undefined ? highlights_url : match.highlights_url,
+        published !== undefined ? Number(published) : match.published,
         thumbnail_url,
         poster_url,
         Number(id)

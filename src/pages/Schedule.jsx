@@ -1,46 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import api from '../utils/api';
 
 export default function Schedule() {
-  const [matches, setMatches] = useState([]);
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState('JUN');
-  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const months = [
-    { label: 'JAN', num: '1' },
-    { label: 'FEB', num: '2' },
-    { label: 'MAR', num: '3' },
-    { label: 'APR', num: '4' },
-    { label: 'MAY', num: '5' },
-    { label: 'JUN', num: '6' },
-    { label: 'JUL', num: '7' },
-    { label: 'AUG', num: '8' },
-    { label: 'SEP', num: '9' },
-    { label: 'OCT', num: '10' },
-    { label: 'NOV', num: '11' },
-    { label: 'DEC', num: '12' },
-  ];
-
   const fetchSchedule = useCallback(async () => {
     try {
-      const [mRes, tRes] = await Promise.all([
-        api.get('/matches'),
-        api.get('/tournaments'),
-      ]);
-
-      if (mRes.data?.matches) setMatches(mRes.data.matches);
-      else if (Array.isArray(mRes.data)) setMatches(mRes.data);
-
-      if (tRes.data?.tournaments) setTournaments(tRes.data.tournaments);
-      else if (Array.isArray(tRes.data)) setTournaments(tRes.data);
+      const res = await api.get('/tournaments');
+      setTournaments(res.tournaments || res.data?.tournaments || res.data || res || []);
     } catch (err) {
       console.error('Failed to load schedule:', err);
     } finally {
@@ -50,257 +28,376 @@ export default function Schedule() {
 
   useEffect(() => {
     fetchSchedule();
-    
-    // Listen for realtime updates from AppContext SSE
     window.addEventListener('entity_update', fetchSchedule);
     return () => window.removeEventListener('entity_update', fetchSchedule);
   }, [fetchSchedule]);
 
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth();
+  
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+
+  const handlePrevMonth = () => setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
+  const handleNextMonth = () => setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
+
+  const monthsList = [
+    'January', 'February', 'March', 'April', 'May', 'June', 
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  
+  // Generate a range of years from 2024 to 2030
+  const yearsList = Array.from({length: 7}, (_, i) => 2024 + i);
+
+  const getTournamentsForDay = (day) => {
+    return tournaments.filter(t => {
+      if (!t.date) return false;
+      const tDate = new Date(t.date);
+      return tDate.getDate() === day && tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
+    });
+  };
+
+  const getTournamentStatus = (t) => {
+    if (t.status === 'completed') return 'COMPLETED';
+    if (t.status === 'cancelled') return 'CANCELLED';
+    
+    // Parse the date properly for browsers
+    const tDate = new Date(`${t.date}T${t.time || '00:00'}:00`);
+    
+    if (t.status === 'live') return 'LIVE';
+    if (tDate.toDateString() === now.toDateString()) {
+      return now.getTime() >= tDate.getTime() ? 'LIVE' : 'UPCOMING';
+    }
+    
+    return now.getTime() > tDate.getTime() ? 'COMPLETED' : 'UPCOMING';
+  };
+
   if (loading) {
     return (
       <div className="page-wrapper" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="loading-spinner" style={{ borderColor: '#000', borderTopColor: 'transparent' }} />
+        <div className="loading-spinner" style={{ borderColor: 'var(--neon)', borderTopColor: 'transparent' }} />
       </div>
     );
   }
 
-  // Get month index for filtering
-  const selectedMonthIndex = months.findIndex(m => m.label === selectedMonth);
+  // Build calendar cells
+  const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => <div key={`blank-${i}`} className="calendar-cell empty" />);
+  const days = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1;
+    const dayTournaments = getTournamentsForDay(day);
+    const isToday = day === now.getDate() && currentMonth === now.getMonth() && currentYear === now.getFullYear();
 
-  // Group and filter tournaments by date
-  const groupedTournaments = tournaments.reduce((acc, t) => {
-    if (!t.date) return acc; // Skip tournaments without a set date
-    const dateObj = new Date(t.date);
-    if (dateObj.getMonth() !== selectedMonthIndex) return acc;
-    
-    const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-    if (!acc[dateStr]) acc[dateStr] = [];
-    acc[dateStr].push(t);
-    return acc;
-  }, {});
+    return (
+      <div key={`day-${day}`} className={`calendar-cell ${isToday ? 'today' : ''}`}>
+        <div className="date-number">{day}</div>
+        <div className="events-container">
+          {dayTournaments.map(t => {
+            const status = getTournamentStatus(t);
+            return (
+              <Link to={`/tournaments`} key={t.id} className={`event-card status-${status.toLowerCase()}`}>
+                <div className="event-header">
+                  {status === 'LIVE' ? <span className="live-dot" /> : <span />}
+                  <span className="event-time">{t.time || 'TBA'}</span>
+                  <span className="event-game">{getGameIcon(t.game)}</span>
+                </div>
+                <div className="event-title">{t.name}</div>
+                <div className="event-status">{status}</div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    );
+  });
+
+  function getGameIcon(game) {
+    const clean = game?.toLowerCase() || '';
+    if (clean.includes('freefire')) return '🔥';
+    if (clean.includes('bgmi')) return '⚔️';
+    if (clean.includes('cod')) return '🛡️';
+    return '🎮';
+  }
 
   return (
-    <div className="page-wrapper" style={{ minHeight: '100vh', background: '#F4F5F7', paddingTop: 'var(--navbar-height)' }}>
-      
-      {/* Huge Neon Header */}
-      <div style={{ background: 'var(--neon)', padding: '5rem 0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <h1 style={{ 
-          fontFamily: 'var(--font-heading)', 
-          fontSize: '5rem', 
-          fontWeight: 900, 
-          margin: 0, 
-          letterSpacing: '0.02em', 
-          color: '#000',
-          textTransform: 'uppercase'
-        }}>
-          SCHEDULE
-        </h1>
+    <motion.div 
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      className="page-wrapper container" 
+      style={{ paddingTop: 'var(--space-12)', paddingBottom: 'var(--space-16)', minHeight: '100vh' }}
+    >
+      <div className="section-header" style={{ marginBottom: 'var(--space-8)' }}>
+        <motion.div className="accent-line" initial={{ width: 0 }} animate={{ width: '40px' }} />
+        <h1 style={{ fontFamily: 'var(--font-heading)', textTransform: 'uppercase', color: 'var(--text)' }}>Full Schedule</h1>
+        <p style={{ fontFamily: 'var(--font-body)', color: 'var(--text-secondary)' }}>
+          Esports tournament calendar. Check match dates and live statuses.
+        </p>
       </div>
 
-      {/* Date Scroller Header (White Background) */}
-      <div style={{ background: '#FFF', padding: '2rem 0', borderBottom: '1px solid #E5E5E5' }}>
-        <div className="container" style={{ textAlign: 'center', maxWidth: '1000px' }}>
-
-          {/* Year selector */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <button style={{ background: '#000', color: '#FFF', width: '28px', height: '28px', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 900 }}>{'<'}</button>
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 900, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#000' }}>
-              {currentTime.getFullYear()} <span style={{ fontSize: '1.2rem', opacity: 0.7 }}>📅</span>
-            </h2>
-            <button style={{ background: '#D1D1D1', color: '#FFF', width: '28px', height: '28px', borderRadius: '50%', border: 'none', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 900 }}>{'>'}</button>
+      <div className="calendar-wrapper">
+        {/* Navigation */}
+        <div className="calendar-nav">
+          <button onClick={handlePrevMonth}>◀</button>
+          <div className="calendar-selectors">
+            <select 
+              value={currentMonth} 
+              onChange={(e) => setCurrentDate(new Date(currentYear, parseInt(e.target.value), 1))}
+              className="calendar-select"
+            >
+              {monthsList.map((m, i) => <option key={i} value={i}>{m}</option>)}
+            </select>
+            
+            <select 
+              value={currentYear} 
+              onChange={(e) => setCurrentDate(new Date(parseInt(e.target.value), currentMonth, 1))}
+              className="calendar-select"
+            >
+              {yearsList.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
           </div>
+          <button onClick={handleNextMonth}>▶</button>
+        </div>
 
-          <div style={{ display: 'inline-block', border: '1px solid #E5E5E5', color: '#000', padding: '0.3rem 1.5rem', fontSize: '0.75rem', fontWeight: 800, fontFamily: 'var(--font-heading)', marginBottom: '2rem' }}>
-            LATEST
-          </div>
-
-          {/* Horizontal Line */}
-          <div style={{ height: '1px', background: '#E5E5E5', width: '100%', marginBottom: '1.5rem' }} />
-
-          {/* Horizontal Months list */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', padding: '0 2rem' }}>
-            {months.map(m => {
-              const isActive = selectedMonth === m.label;
-              return (
-                <div 
-                  key={m.label}
-                  onClick={() => setSelectedMonth(m.label)}
-                  style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    alignItems: 'center', 
-                    cursor: 'pointer',
-                    color: isActive ? '#000' : '#A0A0A0',
-                    borderBottom: isActive ? '3px solid #000' : '3px solid transparent',
-                    paddingBottom: '0.5rem',
-                    transition: 'all 0.2s',
-                    width: '40px'
-                  }}
-                >
-                  <span style={{ fontSize: '1.4rem', fontWeight: 900, fontFamily: 'var(--font-heading)' }}>{m.num}</span>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 800, fontFamily: 'var(--font-heading)', textTransform: 'uppercase', marginTop: '2px' }}>{m.label}</span>
-                </div>
-              );
-            })}
-          </div>
-
+        {/* Calendar Grid */}
+        <div className="calendar-grid">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+            <div key={day} className="calendar-day-header">{day}</div>
+          ))}
+          {blanks}
+          {days}
         </div>
       </div>
 
-      {/* Tournament List Area */}
-      <div className="container" style={{ padding: '3rem 1.5rem', maxWidth: '1200px' }}>
+      <style>{`
+        .calendar-wrapper {
+          background: #0A0A0A;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        .calendar-nav {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: #111;
+          padding: 1.5rem 2rem;
+          border-bottom: 1px solid var(--border);
+        }
+        .calendar-nav h2 {
+          margin: 0;
+          font-family: var(--font-heading);
+          color: var(--neon);
+          text-transform: uppercase;
+          letter-spacing: 2px;
+          display: flex;
+          align-items: center;
+        }
+        .calendar-selectors {
+          display: flex;
+          gap: 1rem;
+          align-items: center;
+        }
+        .calendar-select {
+          background: #000;
+          color: #FFF;
+          border: 1px solid var(--border);
+          padding: 0.5rem 1.5rem;
+          border-radius: 4px;
+          font-family: var(--font-heading);
+          font-size: 1.1rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          cursor: pointer;
+          outline: none;
+          transition: all 0.2s ease;
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+          background-repeat: no-repeat;
+          background-position-x: 95%;
+          background-position-y: center;
+          padding-right: 2.5rem;
+        }
+        .calendar-select:hover, .calendar-select:focus {
+          border-color: var(--neon);
+          color: var(--neon);
+          box-shadow: 0 0 10px rgba(215, 255, 0, 0.1);
+          background-image: url("data:image/svg+xml;utf8,<svg fill='%23D7FF00' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+        }
+        .calendar-nav button {
+          background: transparent;
+          border: 1px solid var(--border);
+          color: #FFF;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          cursor: pointer;
+          font-weight: bold;
+          font-family: var(--font-heading);
+          transition: all 0.2s;
+        }
+        .calendar-nav button:hover {
+          background: var(--neon);
+          color: #000;
+          border-color: var(--neon);
+        }
+        .calendar-grid {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          background: var(--border);
+          gap: 1px;
+        }
+        .calendar-day-header {
+          background: #0A0A0A;
+          padding: 1rem;
+          text-align: center;
+          font-family: var(--font-heading);
+          font-weight: 800;
+          color: var(--text-secondary);
+          text-transform: uppercase;
+          font-size: 0.9rem;
+        }
+        .calendar-cell {
+          background: #0A0A0A;
+          min-height: 140px;
+          padding: 0.75rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+        .calendar-cell.empty {
+          background: #050505;
+        }
+        .calendar-cell.today {
+          background: rgba(215, 255, 0, 0.03);
+        }
+        .calendar-cell.today .date-number {
+          background: var(--neon);
+          color: #000;
+        }
+        .date-number {
+          font-family: var(--font-mono);
+          font-size: 0.9rem;
+          font-weight: 800;
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 4px;
+          color: #888;
+        }
+        .events-container {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .event-card {
+          text-decoration: none;
+          background: #151515;
+          border: 1px solid #222;
+          border-left: 3px solid #555;
+          padding: 0.5rem;
+          border-radius: 4px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          transition: all 0.2s;
+        }
+        .event-card:hover {
+          transform: translateY(-2px);
+          background: #1A1A1A;
+          border-color: #333;
+        }
+        .event-card.status-upcoming {
+          border-left-color: #3B82F6;
+        }
+        .event-card.status-live {
+          border-left-color: var(--error);
+          background: rgba(255, 51, 102, 0.05);
+        }
+        .event-card.status-completed {
+          border-left-color: #A0A0A0;
+          opacity: 0.6;
+        }
+        .event-card.status-completed:hover {
+          opacity: 1;
+        }
+        .event-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-size: 0.7rem;
+          font-family: var(--font-mono);
+          color: #AAA;
+        }
+        .live-dot {
+          width: 6px;
+          height: 6px;
+          background: var(--error);
+          border-radius: 50%;
+          animation: pulse 1.5s infinite;
+        }
+        .event-title {
+          font-family: var(--font-heading);
+          font-size: 0.85rem;
+          font-weight: 800;
+          color: #FFF;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .event-status {
+          font-size: 0.65rem;
+          font-family: var(--font-heading);
+          font-weight: 800;
+          text-transform: uppercase;
+        }
+        .status-upcoming .event-status { color: #3B82F6; }
+        .status-live .event-status { color: var(--error); }
+        .status-completed .event-status { color: #A0A0A0; }
         
-        {Object.keys(groupedTournaments).length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '4rem', color: '#A0A0A0', fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.2rem', textTransform: 'uppercase' }}>
-            NO TOURNAMENTS SCHEDULED FOR {selectedMonth}
-          </div>
-        ) : (
-          Object.entries(groupedTournaments).map(([dateLabel, dayTournaments]) => {
-            const parts = dateLabel.split(', ');
-            const weekday = parts[0];
-            const dateStr = parts[1] ? parts[1].toUpperCase() : '';
+        @keyframes pulse {
+          0% { opacity: 1; box-shadow: 0 0 0 0 rgba(255, 51, 102, 0.7); }
+          70% { opacity: 0.5; box-shadow: 0 0 0 6px rgba(255, 51, 102, 0); }
+          100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255, 51, 102, 0); }
+        }
 
-            return (
-              <div key={dateLabel} style={{ marginBottom: '3rem' }}>
-                
-                {/* Date Header Tag */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1.5rem', marginLeft: '0.5rem' }}>
-                  <div style={{ width: '14px', height: '14px', background: 'var(--neon)', transform: 'skewX(-20deg)' }} />
-                  <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', fontWeight: 900, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#000' }}>
-                    {weekday} <span style={{ color: '#D1D1D1', fontWeight: 400 }}>|</span> {dateStr}
-                  </h3>
-                </div>
-
-                {/* Tournament Rows */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {dayTournaments.map((tournament) => {
-                    return (
-                      <div 
-                        key={tournament.id}
-                        style={{ 
-                          background: '#FFF', 
-                          display: 'flex', 
-                          alignItems: 'stretch', 
-                          justifyContent: 'space-between',
-                          border: '1px solid #E5E5E5',
-                        }}
-                      >
-                        {/* Left Side: Time and Info */}
-                        <div style={{ display: 'flex', alignItems: 'stretch', flex: 1 }}>
-                          {/* Time Column */}
-                          <div style={{ 
-                            fontFamily: 'var(--font-heading)', 
-                            fontSize: '1.1rem', 
-                            fontWeight: 900, 
-                            color: '#000',
-                            padding: '1.5rem 2rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            minWidth: '100px',
-                            borderRight: '1px solid #E5E5E5'
-                          }}>
-                            {tournament.time || 'TBD'}
-                          </div>
-                          
-                          {/* Tournament Info Column */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem 2rem' }}>
-                            <div style={{ width: '45px', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {tournament.banner_url || tournament.poster_url ? (
-                                <img src={tournament.banner_url || tournament.poster_url} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                              ) : (
-                                <span style={{ fontSize: '1.8rem' }}>🛡️</span>
-                              )}
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <h4 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 900, margin: 0, color: '#000', textTransform: 'uppercase' }}>
-                                {tournament.name}
-                              </h4>
-                              {(() => {
-                                // Check if tournament is live based on time
-                                const tourneyDate = new Date(`${tournament.date}T${tournament.time || '00:00'}:00`);
-                                const timeDiff = currentTime.getTime() - tourneyDate.getTime();
-                                const isLiveOrStarted = timeDiff >= 0 && tournament.status !== 'completed' && tournament.status !== 'cancelled';
-                                
-                                if (tournament.status === 'live' || isLiveOrStarted) {
-                                  return (
-                                    <span style={{ color: 'var(--error)', fontSize: '0.8rem', fontWeight: 900, fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                                      <span style={{ width: '6px', height: '6px', background: 'var(--error)', borderRadius: '50%', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
-                                      LIVE NOW
-                                    </span>
-                                  );
-                                } else if (tournament.status === 'completed') {
-                                  return (
-                                    <span style={{ color: '#A0A0A0', fontSize: '0.8rem', fontWeight: 900, fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                                      COMPLETED
-                                    </span>
-                                  );
-                                } else if (tournament.status === 'cancelled') {
-                                  return (
-                                    <span style={{ color: 'var(--error)', fontSize: '0.8rem', fontWeight: 900, fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                                      CANCELLED
-                                    </span>
-                                  );
-                                }
-                                return null;
-                              })()}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Right Side: Action Buttons */}
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0 2rem' }}>
-                          <button style={{ 
-                            background: '#000', 
-                            color: 'var(--neon)', 
-                            padding: '0.5rem 1.2rem', 
-                            border: 'none', 
-                            fontFamily: 'var(--font-heading)', 
-                            fontSize: '0.75rem', 
-                            fontWeight: 900, 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '0.5rem', 
-                            cursor: 'pointer' 
-                          }}>
-                            <span style={{ fontSize: '1rem', lineHeight: 1 }}>▷</span> VOD
-                          </button>
-                          <button style={{ 
-                            background: '#000', 
-                            color: 'var(--neon)', 
-                            padding: '0.5rem 1.2rem', 
-                            border: 'none', 
-                            fontFamily: 'var(--font-heading)', 
-                            fontSize: '0.75rem', 
-                            fontWeight: 900, 
-                            cursor: 'pointer' 
-                          }}>
-                            RESULT
-                          </button>
-                          <button style={{ 
-                            background: '#000', 
-                            color: 'var(--neon)', 
-                            padding: '0.5rem 1.2rem', 
-                            border: 'none', 
-                            fontFamily: 'var(--font-heading)', 
-                            fontSize: '0.75rem', 
-                            fontWeight: 900, 
-                            cursor: 'pointer' 
-                          }}>
-                            PARTICIPATING TEAM
-                          </button>
-                        </div>
-                        
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-    </div>
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+          .calendar-selectors {
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+          .calendar-select {
+            font-size: 0.9rem;
+            padding: 0.4rem 1rem;
+            padding-right: 2rem;
+          }
+          .calendar-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            background: #0A0A0A;
+          }
+          .calendar-day-header {
+            display: none;
+          }
+          .calendar-cell.empty {
+            display: none;
+          }
+          .calendar-cell {
+            min-height: auto;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem;
+            flex-direction: row;
+            align-items: flex-start;
+          }
+          .events-container {
+            flex: 1;
+            margin-left: 1rem;
+          }
+        }
+      `}</style>
+    </motion.div>
   );
 }

@@ -193,11 +193,24 @@ function createTables(database) {
     CREATE TABLE IF NOT EXISTS matches (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       tournament_id INTEGER NOT NULL,
+      match_name TEXT,
       match_number INTEGER NOT NULL,
+      game TEXT,
       date TEXT,
-      status TEXT DEFAULT 'upcoming' CHECK(status IN ('upcoming','live','completed')),
+      time TEXT,
+      status TEXT DEFAULT 'upcoming' CHECK(status IN ('upcoming','live','completed','cancelled')),
+      winning_team_id INTEGER,
+      runner_up_team_id INTEGER,
+      mvp_player_id INTEGER,
+      poster_url TEXT,
+      notes TEXT,
+      highlights_url TEXT,
+      published INTEGER DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (tournament_id) REFERENCES tournaments(id)
+      FOREIGN KEY (tournament_id) REFERENCES tournaments(id),
+      FOREIGN KEY (winning_team_id) REFERENCES teams(id),
+      FOREIGN KEY (runner_up_team_id) REFERENCES teams(id),
+      FOREIGN KEY (mvp_player_id) REFERENCES players(id)
     );
 
     CREATE TABLE IF NOT EXISTS results (
@@ -593,7 +606,14 @@ export async function initializeDatabase() {
   try { db.run(`ALTER TABLE matches ADD COLUMN description TEXT`); } catch(e) {}
   try { db.run(`ALTER TABLE matches ADD COLUMN thumbnail_url TEXT`); } catch(e) {}
   try { db.run(`ALTER TABLE matches ADD COLUMN poster_url TEXT`); } catch(e) {}
-
+  try { db.run(`ALTER TABLE matches ADD COLUMN match_name TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE matches ADD COLUMN game TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE matches ADD COLUMN winning_team_id INTEGER`); } catch(e) {}
+  try { db.run(`ALTER TABLE matches ADD COLUMN runner_up_team_id INTEGER`); } catch(e) {}
+  try { db.run(`ALTER TABLE matches ADD COLUMN mvp_player_id INTEGER`); } catch(e) {}
+  try { db.run(`ALTER TABLE matches ADD COLUMN notes TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE matches ADD COLUMN highlights_url TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE matches ADD COLUMN published INTEGER DEFAULT 1`); } catch(e) {}
   db.saveToFile();
   console.log('✅ Migrated database: added advanced columns to certificates, players, teams & matches tables');
   return db;

@@ -75,35 +75,20 @@ export default function HallOfFame() {
       animate="visible"
       variants={containerVariants}
       className="page-wrapper container" 
-      style={{ paddingTop: 'calc(var(--navbar-height) + var(--space-8))', paddingBottom: 'var(--space-16)' }}
+      style={{ paddingTop: 'var(--space-12)', paddingBottom: 'var(--space-16)' }}
     >
-      <motion.div variants={itemVariants} className="section-header" style={{ marginBottom: 'var(--space-12)', textAlign: 'center' }}>
-        <div style={{ display: 'inline-block', position: 'relative' }}>
-          <h1 style={{ 
-            fontFamily: 'var(--font-heading)', 
-            fontSize: '3.5rem', 
-            textTransform: 'uppercase', 
-            letterSpacing: '0.05em',
-            margin: 0,
-            textShadow: '0 0 20px rgba(215,255,0,0.3)'
-          }}>
-            Hall of <span style={{ color: 'var(--neon)' }}>Fame</span>
-          </h1>
-          <div style={{
-            position: 'absolute',
-            bottom: '-10px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '60%',
-            height: '2px',
-            background: 'var(--neon)',
-            boxShadow: '0 0 10px var(--neon)'
-          }} />
-        </div>
-        <p style={{ marginTop: 'var(--space-6)', color: 'var(--text-secondary)', fontSize: 'var(--text-lg)', fontFamily: 'var(--font-mono)' }}>
-          IMMORTALIZED LEGENDS OF BHIMA ESPORTS
+      <div className="section-header" style={{ marginBottom: 'var(--space-8)' }}>
+        <motion.div 
+          className="accent-line" 
+          initial={{ width: 0 }}
+          animate={{ width: '40px' }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        />
+        <h1 style={{ fontFamily: 'var(--font-heading)', textTransform: 'uppercase', color: 'var(--text)' }}>Hall of Fame</h1>
+        <p style={{ fontFamily: 'var(--font-body)', color: 'var(--text-secondary)' }}>
+          Immortalized legends of Bhima Esports.
         </p>
-      </motion.div>
+      </div>
 
       <motion.h3 variants={itemVariants} style={{ 
         textTransform: 'uppercase', 
