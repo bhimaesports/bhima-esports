@@ -34,7 +34,7 @@ router.put('/', authenticate, (req, res) => {
       return res.status(400).json({ error: 'Settings object is required.' });
     }
 
-    db.transaction(() => {
+    try {
       for (const [key, value] of Object.entries(settings)) {
         const existing = db.get('SELECT id FROM settings WHERE key = ?', [key]);
         if (existing) {
@@ -43,7 +43,9 @@ router.put('/', authenticate, (req, res) => {
           db.run('INSERT INTO settings (key, value) VALUES (?, ?)', [key, String(value)]);
         }
       }
-    });
+    } catch (err) {
+      throw err;
+    }
 
     db.run(
       'INSERT INTO admin_logs (admin_id, action, details, ip_address) VALUES (?, ?, ?, ?)',

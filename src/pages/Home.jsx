@@ -137,7 +137,7 @@ export default function Home() {
         {/* Diagonal Line Overlay (Restored & Enhanced) */}
         <div style={{
           position: 'absolute', inset: 0,
-          backgroundImage: `repeating-linear-gradient(45deg, rgba(215,255,0,0.75) 0, rgba(215,255,0,0.75) 2px, transparent 2px, transparent 10px)`,
+          backgroundImage: `repeating-linear-gradient(45deg, rgba(215,255,0,0.1) 0, rgba(215,255,0,0.1) 2px, transparent 2px, transparent 10px)`,
           zIndex: 2, pointerEvents: 'none',
         }}></div>
 
