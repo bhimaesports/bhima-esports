@@ -58,15 +58,17 @@ export default function Navbar({ toggleTheme }) {
           left: 0,
           right: 0,
           zIndex: 'var(--z-sticky)',
-          borderBottom: '1px solid #000',
-          background: 'var(--neon)', /* Bright Yellow Navbar */
-          height: '60px', /* Fixed height to match side blocks */
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
+          background: 'rgba(10, 10, 10, 0.85)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          height: 'clamp(60px, 7vh, 75px)',
           transition: 'all 0.3s ease',
         }}
       >
-        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ width: '100%', height: '100%', display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center' }}>
           {/* Left: Logo Area */}
-          <div style={{ display: 'flex', height: '100%', background: '#000', padding: '0 2.5rem', flexShrink: 0 }}>
+          <div style={{ display: 'flex', height: '100%', padding: '0 1.5rem', justifySelf: 'start', alignItems: 'center' }}>
             {/* PUBG Esports-style Black Box Logo */}
             <Link to="/" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textDecoration: 'none' }}>
               <img
@@ -81,7 +83,7 @@ export default function Navbar({ toggleTheme }) {
           {/* Center: Desktop Nav Links */}
           <div 
             className="hide-mobile" 
-            style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flex: 1, justifyContent: 'center' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '2rem', justifySelf: 'center' }}
             onMouseLeave={() => setHoveredLink(null)}
           >
             {NAV_LINKS.map((link) => {
@@ -102,7 +104,7 @@ export default function Navbar({ toggleTheme }) {
                     fontWeight: 900,
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
-                    color: '#000',
+                    color: '#FFF',
                     textShadow: 'none',
                     whiteSpace: 'nowrap',
                     textDecoration: 'none',
@@ -112,7 +114,7 @@ export default function Navbar({ toggleTheme }) {
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  {link.label} {['Tournaments', 'Schedule'].includes(link.label) && <span style={{ fontSize: '0.6rem' }}>▼</span>}
+                  {link.label}
                   
                   {showUnderline && (
                     <motion.div
@@ -123,9 +125,10 @@ export default function Navbar({ toggleTheme }) {
                         bottom: '-10px',
                         left: 0,
                         right: 0,
-                        height: '3px',
-                        background: '#000',
-                        borderRadius: '0px'
+                        height: '2px',
+                        background: 'var(--neon)',
+                        borderRadius: '2px',
+                        boxShadow: '0 0 10px rgba(215,255,0,0.5)'
                       }}
                     />
                   )}
@@ -135,7 +138,7 @@ export default function Navbar({ toggleTheme }) {
           </div>
 
           {/* Right: Actions */}
-          <div className="hide-mobile" style={{ display: 'flex', height: '100%', alignItems: 'center', flexShrink: 0 }}>
+          <div className="hide-mobile" style={{ display: 'flex', height: '100%', alignItems: 'center', justifySelf: 'end' }}>
 
             {playerToken ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingRight: '1rem' }}>
@@ -148,7 +151,7 @@ export default function Navbar({ toggleTheme }) {
                     fontFamily: "'Rajdhani', sans-serif",
                     fontSize: '0.95rem',
                     fontWeight: 800,
-                    color: '#000',
+                    color: '#FFF',
                     textDecoration: 'none'
                   }}
                 >
