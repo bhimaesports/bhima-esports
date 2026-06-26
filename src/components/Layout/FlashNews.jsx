@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 
 export default function FlashNews() {
   const [news, setNews] = useState([]);
-  const { sseEvents } = useApp();
+  const { sseEvents, settings } = useApp();
 
   const fetchNews = async () => {
     try {
@@ -27,27 +27,57 @@ export default function FlashNews() {
 
   if (!news || news.length === 0) return null;
 
-  // Calculate dynamic duration based on text length to keep speed consistent
-  const baseLength = news.reduce((acc, item) => acc + item.text.length, 0);
+  // Calculate base length of all text to determine animation length
+  const baseLength = news.reduce((acc, item) => acc + (item.title.length + (item.description?.length || 0)), 0);
   
-  // Multiply the news array 20 times to guarantee it spans ultra-wide screens even if there's only 1 short item
+  // Multiply the news array multiple times to guarantee it spans ultra-wide screens
   const multipliedNews = [];
   for (let i = 0; i < 20; i++) {
     multipliedNews.push(...news.map(n => ({ ...n, uniqueKey: `${n.id}_${i}` })));
   }
 
-  // Calculate duration so it scrolls at a consistent speed regardless of how much text is generated
-  const animationDuration = Math.max(20, baseLength * 20 * 0.1) + 's';
+  // Adjust speed multiplier based on setting
+  const speedSetting = settings?.flash_news_speed || 'normal';
+  let speedMultiplier = 0.1;
+  if (speedSetting === 'slow') speedMultiplier = 0.15;
+  if (speedSetting === 'fast') speedMultiplier = 0.05;
+
+  const animationDuration = Math.max(20, baseLength * 20 * speedMultiplier) + 's';
 
   const NewsBlock = () => (
     <div style={{ display: 'flex', flexShrink: 0 }}>
-      {multipliedNews.map((item) => (
-        <span key={item.uniqueKey} style={{ display: 'inline-flex', alignItems: 'center', padding: '0 2rem' }}>
-          <span style={{ marginRight: '0.75rem', fontSize: '1rem' }}>📢</span>
-          {item.text}
-          <span style={{ marginLeft: '2rem', opacity: 0.3 }}>•</span>
-        </span>
-      ))}
+      {multipliedNews.map((item) => {
+        let badgeColor = 'transparent';
+        if (item.priority === 'high') badgeColor = 'var(--error)';
+        if (item.priority === 'low') badgeColor = 'var(--bg-secondary)';
+
+        return (
+          <span key={item.uniqueKey} style={{ display: 'inline-flex', alignItems: 'center', padding: '0 2rem' }}>
+            {item.priority === 'high' && (
+              <span style={{ 
+                background: badgeColor, 
+                color: '#FFF', 
+                padding: '0.1rem 0.5rem', 
+                borderRadius: '3px', 
+                marginRight: '0.75rem',
+                fontSize: '0.7rem'
+              }}>
+                ALERT
+              </span>
+            )}
+            <span style={{ marginRight: '0.5rem', fontSize: '1rem' }}>{item.priority === 'high' ? '🔥' : '📢'}</span>
+            <span style={{ color: item.priority === 'high' ? 'var(--error)' : 'inherit', fontWeight: item.priority === 'high' ? 900 : 700 }}>
+              {item.title}
+            </span>
+            {item.description && (
+              <span style={{ marginLeft: '0.5rem', opacity: 0.8, textTransform: 'none', fontWeight: 400 }}>
+                - {item.description}
+              </span>
+            )}
+            <span style={{ marginLeft: '2rem', opacity: 0.3 }}>•</span>
+          </span>
+        );
+      })}
     </div>
   );
 
@@ -78,7 +108,6 @@ export default function FlashNews() {
           willChange: 'transform'
         }}
       >
-        {/* Render the massive block twice. TranslateX(-50%) moves it exactly the width of ONE block, ensuring a perfect, gapless loop. */}
         <NewsBlock />
         <NewsBlock />
       </div>

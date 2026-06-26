@@ -244,14 +244,22 @@ router.delete('/partners/:id', authenticate, (req, res) => {
 // FLASH NEWS
 // ==========================================
 
-// GET /api/homepage/flash-news - Get flash news
+// GET /api/homepage/flash-news - Get active flash news
 router.get('/flash-news', (req, res) => {
   try {
     const db = getDb();
     const { all } = req.query;
     let query = 'SELECT * FROM flash_news';
-    if (!all) query += ' WHERE is_active = 1';
-    query += ' ORDER BY is_pinned DESC, id DESC';
+    
+    if (!all) {
+      // For public API: only active and within date range if provided
+      const today = new Date().toISOString().split('T')[0];
+      query += ` WHERE is_active = 1 
+                 AND (start_date IS NULL OR start_date <= '${today}')
+                 AND (end_date IS NULL OR end_date >= '${today}')`;
+    }
+    
+    query += ' ORDER BY display_order ASC, created_at DESC';
     const flashNews = db.all(query);
     res.json({ flashNews });
   } catch (err) {
@@ -264,17 +272,25 @@ router.get('/flash-news', (req, res) => {
 router.post('/flash-news', authenticate, (req, res) => {
   try {
     const db = getDb();
-    const { text, is_active, is_pinned, scheduled_for } = req.body;
+    const { title, description, priority, start_date, end_date, is_active, display_order } = req.body;
     
-    if (!text) return res.status(400).json({ error: 'Text is required' });
+    if (!title) return res.status(400).json({ error: 'Title is required' });
 
     db.run(
-      `INSERT INTO flash_news (text, is_active, is_pinned, scheduled_for) VALUES (?, ?, ?, ?)`,
-      [text, is_active !== undefined ? Number(is_active) : 1, is_pinned ? 1 : 0, scheduled_for || null]
+      `INSERT INTO flash_news (title, description, priority, start_date, end_date, is_active, display_order) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        title, 
+        description || null, 
+        priority || 'normal', 
+        start_date || null, 
+        end_date || null, 
+        is_active !== undefined ? Number(is_active) : 1,
+        display_order || 0
+      ]
     );
 
-    broadcastEvent('entity_update', { type: 'flash_news' });
-    res.json({ message: 'Flash news created successfully.' });
+    broadcastEvent('flash_news', {});
+    res.status(201).json({ message: 'Flash news created successfully.' });
   } catch (err) {
     console.error('Create flash news error:', err);
     res.status(500).json({ error: 'Internal server error.' });
@@ -286,26 +302,53 @@ router.put('/flash-news/:id', authenticate, (req, res) => {
   try {
     const db = getDb();
     const { id } = req.params;
-    const { text, is_active, is_pinned, scheduled_for } = req.body;
-
+    const { title, description, priority, start_date, end_date, is_active, display_order } = req.body;
+    
     const existing = db.get('SELECT * FROM flash_news WHERE id = ?', [Number(id)]);
-    if (!existing) return res.status(404).json({ error: 'Flash news not found.' });
+    if (!existing) return res.status(404).json({ error: 'Flash news not found' });
 
     db.run(
-      `UPDATE flash_news SET text = ?, is_active = ?, is_pinned = ?, scheduled_for = ? WHERE id = ?`,
+      `UPDATE flash_news SET title = ?, description = ?, priority = ?, start_date = ?, end_date = ?, is_active = ?, display_order = ? WHERE id = ?`,
       [
-        text !== undefined ? text : existing.text,
+        title || existing.title,
+        description !== undefined ? description : existing.description,
+        priority || existing.priority,
+        start_date !== undefined ? start_date : existing.start_date,
+        end_date !== undefined ? end_date : existing.end_date,
         is_active !== undefined ? Number(is_active) : existing.is_active,
-        is_pinned !== undefined ? Number(is_pinned) : existing.is_pinned,
-        scheduled_for !== undefined ? scheduled_for : existing.scheduled_for,
+        display_order !== undefined ? Number(display_order) : existing.display_order,
         Number(id)
       ]
     );
 
-    broadcastEvent('entity_update', { type: 'flash_news' });
+    broadcastEvent('flash_news', {});
     res.json({ message: 'Flash news updated successfully.' });
   } catch (err) {
     console.error('Update flash news error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// PUT /api/homepage/flash-news/reorder - Bulk reorder
+router.put('/flash-news/reorder', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const { orderedIds } = req.body; // Array of IDs in the new order
+    
+    if (!Array.isArray(orderedIds)) {
+      return res.status(400).json({ error: 'orderedIds must be an array' });
+    }
+
+    db.transaction(() => {
+      orderedIds.forEach((id, index) => {
+        db.run('UPDATE flash_news SET display_order = ? WHERE id = ?', [index, Number(id)]);
+      });
+    });
+
+    broadcastEvent('flash_news', {});
+    res.json({ message: 'Flash news reordered successfully.' });
+  } catch (err) {
+    console.error('Reorder flash news error:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }
 });
@@ -315,7 +358,7 @@ router.delete('/flash-news/:id', authenticate, (req, res) => {
   try {
     const db = getDb();
     db.run('DELETE FROM flash_news WHERE id = ?', [Number(req.params.id)]);
-    broadcastEvent('entity_update', { type: 'flash_news' });
+    broadcastEvent('flash_news', {});
     res.json({ message: 'Flash news deleted successfully.' });
   } catch (err) {
     console.error('Delete flash news error:', err);

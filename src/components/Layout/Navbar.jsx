@@ -6,14 +6,7 @@ import MobileNav from './MobileNav';
 import { motion } from 'framer-motion';
 import FlashNews from './FlashNews';
 
-const NAV_LINKS = [
-  { path: '/', label: 'Home' },
-  { path: '/tournaments', label: 'Tournaments' },
-  { path: '/teams', label: 'Teams' },
-  { path: '/players', label: 'Players' },
-  { path: '/leaderboard', label: 'Leaderboard' },
-  { path: '/hall-of-fame', label: 'Hall of Fame' },
-];
+// NAV_LINKS moved inside the component to be dynamic based on settings
 
 export default function Navbar({ toggleTheme }) {
   const location = useLocation();
@@ -30,6 +23,15 @@ export default function Navbar({ toggleTheme }) {
     localStorage.removeItem('playerToken');
     navigate('/');
   };
+
+  const navLinks = [
+    { path: '/', label: settings?.cms_nav_home || 'Home' },
+    { path: '/tournaments', label: settings?.cms_nav_tournaments || 'Tournaments' },
+    { path: '/teams', label: settings?.cms_nav_teams || 'Teams' },
+    { path: '/players', label: settings?.cms_nav_players || 'Players' },
+    { path: '/leaderboard', label: settings?.cms_nav_leaderboard || 'Leaderboard' },
+    { path: '/hall-of-fame', label: settings?.cms_nav_hof || 'Hall of Fame' },
+  ];
 
 
   useEffect(() => {
@@ -86,7 +88,7 @@ export default function Navbar({ toggleTheme }) {
             style={{ display: 'flex', alignItems: 'center', gap: '2rem', justifySelf: 'center' }}
             onMouseLeave={() => setHoveredLink(null)}
           >
-            {NAV_LINKS.map((link) => {
+            {navLinks.map((link) => {
               const active = isActive(link.path);
               const isHovered = hoveredLink === link.path;
               const showUnderline = hoveredLink ? isHovered : active;
@@ -250,7 +252,7 @@ export default function Navbar({ toggleTheme }) {
         </div>
       </motion.nav>
 
-      <MobileNav isOpen={mobileOpen} onClose={() => setMobileOpen(false)} links={NAV_LINKS} />
+      <MobileNav isOpen={mobileOpen} onClose={() => setMobileOpen(false)} links={navLinks} />
 
       <style>{`
         @keyframes marquee {

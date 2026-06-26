@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
 import Card from '../components/UI/Card';
+import { useApp } from '../context/AppContext';
 
 export default function Leaderboard() {
+  const { settings } = useApp();
   const [activeTab, setActiveTab] = useState('teams');
   const [teamsLb, setTeamsLb] = useState([]);
   const [championshipLb, setChampionshipLb] = useState([]);
@@ -319,9 +321,11 @@ export default function Leaderboard() {
           animate={{ width: '40px' }}
           transition={{ duration: 0.5, delay: 0.2 }}
         />
-        <h1 style={{ fontFamily: 'var(--font-heading)', textTransform: 'uppercase', color: 'var(--text)' }}>Leaderboard</h1>
+        <h1 style={{ fontFamily: 'var(--font-heading)', textTransform: 'uppercase', color: 'var(--text)' }}>
+          {settings?.cms_page_leaderboard_title || 'Leaderboard'}
+        </h1>
         <p style={{ fontFamily: 'var(--font-body)', color: 'var(--text-secondary)' }}>
-          Real-time team standings and player rankings of Bhima Hostel.
+          {settings?.cms_page_leaderboard_sub || 'Real-time standings and player rankings.'}
         </p>
       </div>
 

@@ -35,6 +35,8 @@ const SECTIONS = [
     links: [
       { path: '/admin/announcements', label: 'Announcements', icon: '📢' },
       { path: '/admin/homepage-cms', label: 'Homepage CMS', icon: '📝' },
+      { path: '/admin/flash-news', label: 'Flash News', icon: '⚡' },
+      { path: '/admin/cms', label: 'Website CMS', icon: '🎨' },
       { path: '/admin/settings', label: 'Settings', icon: '⚙️' },
       { path: '/admin/security', label: 'Security', icon: '🔒' },
       { path: '/admin/backups', label: 'Backups', icon: '💾' },

@@ -490,135 +490,7 @@ function PartnersTab() {
   );
 }
 
-function FlashNewsTab() {
-  const [news, setNews] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-
-  const [formData, setFormData] = useState({ text: '', is_active: 1, is_pinned: 0, scheduled_for: '' });
-
-  useEffect(() => {
-    fetchNews();
-  }, []);
-
-  const fetchNews = async () => {
-    setLoading(true);
-    try {
-      const data = await api.get('/homepage/flash-news', { all: 1 });
-      setNews(data.flashNews || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOpenModal = (item = null) => {
-    setEditingItem(item);
-    if (item) {
-      setFormData({
-        text: item.text,
-        is_active: item.is_active ? 1 : 0,
-        is_pinned: item.is_pinned ? 1 : 0,
-        scheduled_for: item.scheduled_for || ''
-      });
-    } else {
-      setFormData({ text: '', is_active: 1, is_pinned: 0, scheduled_for: '' });
-    }
-    setModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setModalOpen(false);
-    setEditingItem(null);
-  };
-
-  const handleSave = async () => {
-    if (!formData.text) return alert('Text is required');
-    setSaving(true);
-    try {
-      if (editingItem) {
-        await api.put(`/homepage/flash-news/${editingItem.id}`, formData);
-      } else {
-        await api.post(`/homepage/flash-news`, formData);
-      }
-      handleCloseModal();
-      fetchNews();
-    } catch (err) {
-      alert(err.message || 'Failed to save flash news');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this flash news?')) return;
-    try {
-      await api.delete(`/homepage/flash-news/${id}`);
-      fetchNews();
-    } catch (err) {
-      alert(err.message || 'Failed to delete flash news');
-    }
-  };
-
-  const columns = [
-    { header: 'Text', accessor: 'text' },
-    { header: 'Pinned', accessor: (row) => row.is_pinned ? <Badge variant="warning">Yes</Badge> : 'No' },
-    { header: 'Active', accessor: (row) => row.is_active ? <Badge variant="success">Yes</Badge> : <Badge variant="error">No</Badge> },
-    { header: 'Scheduled', accessor: (row) => row.scheduled_for ? new Date(row.scheduled_for).toLocaleString() : 'Immediate' },
-    {
-      header: 'Actions',
-      accessor: (row) => (
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <Button size="sm" variant="outline" onClick={() => handleOpenModal(row)}>Edit</Button>
-          <Button size="sm" variant="outline" style={{ borderColor: 'var(--error)', color: 'var(--error)' }} onClick={() => handleDelete(row.id)}>Delete</Button>
-        </div>
-      )
-    }
-  ];
-
-  return (
-    <div style={{ display: 'grid', gap: 'var(--space-6)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ margin: 0 }}>Flash News Ticker</h3>
-        <Button variant="primary" onClick={() => handleOpenModal()}>+ Add News</Button>
-      </div>
-
-      <Card>
-        {loading ? <div style={{ textAlign: 'center' }}>Loading...</div> : (
-          <Table columns={columns} data={news} />
-        )}
-      </Card>
-
-      <Modal isOpen={modalOpen} onClose={handleCloseModal} title={editingItem ? 'Edit Flash News' : 'Add Flash News'}>
-        <div className="form-group">
-          <label>News Text *</label>
-          <input className="form-control" value={formData.text} onChange={e => setFormData({ ...formData, text: e.target.value })} />
-        </div>
-        <div className="form-group">
-          <label>Schedule For (Optional)</label>
-          <input type="datetime-local" className="form-control" value={formData.scheduled_for} onChange={e => setFormData({ ...formData, scheduled_for: e.target.value })} />
-        </div>
-        <div className="form-group" style={{ display: 'flex', gap: '1rem' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-            <input type="checkbox" checked={formData.is_active === 1} onChange={e => setFormData({ ...formData, is_active: e.target.checked ? 1 : 0 })} />
-            Is Active
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-            <input type="checkbox" checked={formData.is_pinned === 1} onChange={e => setFormData({ ...formData, is_pinned: e.target.checked ? 1 : 0 })} />
-            Is Pinned
-          </label>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
-          <Button variant="outline" onClick={handleCloseModal}>Cancel</Button>
-          <Button variant="primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
-        </div>
-      </Modal>
-    </div>
-  );
-}
+// FlashNewsTab removed and migrated to AdminFlashNews.jsx
 
 export default function AdminHomepageCMS() {
   const [activeTab, setActiveTab] = useState('settings');
@@ -634,14 +506,12 @@ export default function AdminHomepageCMS() {
 
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', flexWrap: 'wrap' }}>
           <Button variant={activeTab === 'settings' ? 'primary' : 'outline'} onClick={() => setActiveTab('settings')}>General Settings</Button>
-          <Button variant={activeTab === 'flashnews' ? 'primary' : 'outline'} onClick={() => setActiveTab('flashnews')}>Flash News</Button>
           <Button variant={activeTab === 'sponsors' ? 'primary' : 'outline'} onClick={() => setActiveTab('sponsors')}>Sponsors</Button>
           <Button variant={activeTab === 'partners' ? 'primary' : 'outline'} onClick={() => setActiveTab('partners')}>Partners</Button>
         </div>
 
         <div className="tab-content stagger-1">
           {activeTab === 'settings' && <SettingsTab />}
-          {activeTab === 'flashnews' && <FlashNewsTab />}
           {activeTab === 'sponsors' && <SponsorsTab />}
           {activeTab === 'partners' && <PartnersTab />}
         </div>

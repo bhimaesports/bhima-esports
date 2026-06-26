@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Button from '../components/UI/Button';
 import Card from '../components/UI/Card';
+import { useApp } from '../context/AppContext';
 
 export default function Contact() {
+  const { settings } = useApp();
   const [submitted, setSubmitted] = useState(false);
 
   return (
@@ -11,8 +13,12 @@ export default function Contact() {
       <div className="container" style={{ maxWidth: 600 }}>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <h1 style={{ fontFamily: 'var(--font-heading)', color: 'var(--neon)', fontSize: '3rem', textTransform: 'uppercase' }}>Contact Us</h1>
-            <p style={{ color: 'var(--text-muted)' }}>Get in touch with the Bhima Esports administration team.</p>
+            <h1 style={{ fontFamily: 'var(--font-heading)', color: 'var(--neon)', fontSize: '3rem', textTransform: 'uppercase' }}>
+              {settings?.cms_page_contact_title || 'Contact Us'}
+            </h1>
+            <p style={{ color: 'var(--text-muted)' }}>
+              {settings?.cms_page_contact_sub || 'Get in touch with the Bhima Esports administration team.'}
+            </p>
           </div>
 
           <Card glow={true}>

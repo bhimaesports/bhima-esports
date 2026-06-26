@@ -1,11 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 
-const QUICK_LINKS = [
-  { path: '/tournaments', label: 'Tournaments' },
-  { path: '/register', label: 'Register' },
-  { path: '/leaderboard', label: 'Leaderboard' }
-];
+// QUICK_LINKS moved inside component
 
 export default function Footer() {
   const { settings } = useApp();
@@ -17,6 +13,12 @@ export default function Footer() {
       instagramUrl = config.social?.instagram || '';
     }
   } catch(e) {}
+
+  const quickLinks = [
+    { path: '/tournaments', label: settings?.cms_nav_tournaments || 'Tournaments' },
+    { path: '/register', label: 'Register' },
+    { path: '/leaderboard', label: settings?.cms_nav_leaderboard || 'Leaderboard' }
+  ];
 
   return (
     <footer style={{
@@ -96,11 +98,17 @@ export default function Footer() {
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
               }}>
-                <span style={{ color: 'var(--neon)' }}>BHIMA</span> ESPORTS
+                {settings?.cms_footer_logo_text ? (
+                  <>
+                    <span style={{ color: 'var(--neon)' }}>{settings.cms_footer_logo_text.split(' ')[0]}</span> {settings.cms_footer_logo_text.split(' ').slice(1).join(' ')}
+                  </>
+                ) : (
+                  <><span style={{ color: 'var(--neon)' }}>BHIMA</span> ESPORTS</>
+                )}
               </span>
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: 320, lineHeight: 1.7, margin: 0 }}>
-              The premier inter-department esports tournament platform. Compete, dominate, and claim glory.
+              {settings?.cms_footer_description || 'The premier inter-department esports tournament platform. Compete, dominate, and claim glory.'}
             </p>
           </div>
 
@@ -117,7 +125,7 @@ export default function Footer() {
               Quick Links
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {QUICK_LINKS.map((link) => (
+              {quickLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
@@ -195,7 +203,7 @@ export default function Footer() {
             color: 'var(--text-dim)',
             letterSpacing: '0.04em',
           }}>
-            © {new Date().getFullYear()} BHIMA ESPORTS. All rights reserved.
+            {settings?.cms_footer_copyright || `© ${new Date().getFullYear()} BHIMA ESPORTS. All rights reserved.`}
           </span>
           <span style={{
             fontFamily: 'var(--font-mono)',

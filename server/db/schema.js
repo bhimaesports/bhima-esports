@@ -312,10 +312,13 @@ function createTables(database) {
 
     CREATE TABLE IF NOT EXISTS flash_news (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      text TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      priority TEXT DEFAULT 'normal',
+      start_date TEXT,
+      end_date TEXT,
       is_active INTEGER DEFAULT 1,
-      is_pinned INTEGER DEFAULT 0,
-      scheduled_for TEXT,
+      display_order INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -458,10 +461,78 @@ function createTables(database) {
       { key: 'primary_button_link', value: '/register' },
       { key: 'secondary_button_text', value: 'View Leaderboard' },
       { key: 'secondary_button_link', value: '/leaderboard' },
-      { key: 'flash_news_enabled', value: '1' }
+      { key: 'flash_news_enabled', value: '1' },
+      { key: 'flash_news_speed', value: 'normal' }
     ];
     for (const s of defaultSettings) {
       db.run('INSERT INTO homepage_settings (key, value) VALUES (?, ?)', [s.key, s.value]);
+    }
+  }
+
+  // Seed default CMS settings if empty
+  const cmsCount = db.get("SELECT COUNT(*) as count FROM settings WHERE key LIKE 'cms_%'").count;
+  if (cmsCount === 0) {
+    const defaultCMSSettings = [
+      // Hero
+      { key: 'cms_hero_label', value: 'OFFICIAL ESPORTS PLATFORM' },
+      { key: 'cms_hero_title_1', value: 'BHIMA' },
+      { key: 'cms_hero_title_2', value: 'ESPORTS' },
+      { key: 'cms_hero_title_3', value: 'TOURNAMENT HUB' },
+      { key: 'cms_hero_description', value: 'The ultimate battlefield for legends. Join tournaments, climb the leaderboards, and prove your skills.' },
+      { key: 'cms_hero_btn_primary', value: 'Register Now' },
+      { key: 'cms_hero_btn_secondary', value: 'View Leaderboard' },
+      { key: 'cms_hero_bg_opacity', value: '0.85' },
+      { key: 'cms_hero_alignment', value: 'center' },
+      { key: 'cms_hero_visible', value: '1' },
+
+      // Navigation
+      { key: 'cms_nav_home', value: 'Home' },
+      { key: 'cms_nav_tournaments', value: 'Tournaments' },
+      { key: 'cms_nav_teams', value: 'Teams' },
+      { key: 'cms_nav_players', value: 'Players' },
+      { key: 'cms_nav_leaderboard', value: 'Leaderboard' },
+      { key: 'cms_nav_hof', value: 'Hall of Fame' },
+
+      // Homepage Cards
+      { key: 'cms_home_card1_title', value: 'BHIMA Esports Season 1' },
+      { key: 'cms_home_card1_sub', value: 'Registrations are now open!' },
+      { key: 'cms_home_card2_title', value: 'Tournament Hub' },
+      { key: 'cms_home_card2_sub', value: 'Explore ongoing battles' },
+      { key: 'cms_home_card3_title', value: 'Leaderboards Live' },
+      { key: 'cms_home_card3_sub', value: 'Check current player standings' },
+      { key: 'cms_home_card4_title', value: 'Join the Community' },
+      { key: 'cms_home_card4_sub', value: 'New challengers arriving' },
+
+      // Pages
+      { key: 'cms_page_tournaments_title', value: 'Active Tournaments' },
+      { key: 'cms_page_tournaments_sub', value: 'Register your squad for upcoming battles' },
+      { key: 'cms_page_teams_title', value: 'Esports Teams' },
+      { key: 'cms_page_teams_sub', value: 'Official rosters and team statistics' },
+      { key: 'cms_page_players_title', value: 'Player Directory' },
+      { key: 'cms_page_players_sub', value: 'Search and analyze player statistics' },
+      { key: 'cms_page_leaderboard_title', value: 'Global Leaderboard' },
+      { key: 'cms_page_leaderboard_sub', value: 'Real-time standings and rankings' },
+      { key: 'cms_page_hof_title', value: 'Hall of Fame' },
+      { key: 'cms_page_hof_sub', value: 'Legends immortalized in Bhima Esports history' },
+      { key: 'cms_page_about_title', value: 'About Bhima Esports' },
+      { key: 'cms_page_about_sub', value: 'The ultimate competitive gaming platform' },
+      { key: 'cms_page_contact_title', value: 'Contact Us' },
+      { key: 'cms_page_contact_sub', value: 'Get in touch with the admin team' },
+
+      // Footer
+      { key: 'cms_footer_logo_text', value: 'BHIMA ESPORTS' },
+      { key: 'cms_footer_description', value: 'The official esports tournament platform for competitive gaming.' },
+      { key: 'cms_footer_copyright', value: '© 2026 Bhima Esports. All rights reserved.' },
+      { key: 'cms_footer_email', value: 'contact@bhimaesports.com' },
+      { key: 'cms_footer_phone', value: '+1 (555) 123-4567' },
+
+      // SEO
+      { key: 'cms_seo_title', value: 'Bhima Esports - Tournament Platform' },
+      { key: 'cms_seo_description', value: 'Official esports tournament platform for Bhima Esports. Join tournaments, track stats, and climb the leaderboard.' },
+      { key: 'cms_seo_keywords', value: 'esports, tournaments, gaming, leaderboard, bgmi, free fire, codm' }
+    ];
+    for (const s of defaultCMSSettings) {
+      db.run('INSERT INTO settings (key, value) VALUES (?, ?)', [s.key, s.value]);
     }
   }
 }

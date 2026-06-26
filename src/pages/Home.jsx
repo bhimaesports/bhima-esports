@@ -60,7 +60,7 @@ export default function Home() {
       try {
         const [lbRes, tourRes] = await Promise.all([
           api.get('/public/leaderboards').catch(() => null),
-          api.get('/public/tournaments').catch(() => null)
+          api.get('/tournaments').catch(() => null)
         ]);
         if (lbRes) setLeaderboard(lbRes);
         if (tourRes && tourRes.tournaments) setTournaments(tourRes.tournaments);
@@ -118,7 +118,9 @@ export default function Home() {
             width: '100%',
             height: '100%',
             objectFit: 'cover',
-            zIndex: 0
+            zIndex: 0,
+            filter: 'contrast(1.15) brightness(1.1) saturate(1.1)',
+            transform: 'scale(1.01)'
           }}
         >
           <source src={heroSlides[currentSlide]?.bgImage || "/assets/hero-bg.mp4"} type="video/mp4" />
@@ -128,14 +130,14 @@ export default function Home() {
         <div style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(rgba(5,5,5,0.7), rgba(5,5,5,0.95))',
+          background: 'linear-gradient(rgba(5,5,5,0.5), rgba(5,5,5,0.85))',
           zIndex: 1
         }}></div>
 
         {/* Diagonal Line Overlay (Restored & Enhanced) */}
         <div style={{
           position: 'absolute', inset: 0,
-          backgroundImage: `repeating-linear-gradient(45deg, rgba(215,255,0,0.45) 0, rgba(215,255,0,0.45) 1.5px, transparent 1.5px, transparent 12px)`,
+          backgroundImage: `repeating-linear-gradient(45deg, rgba(215,255,0,0.75) 0, rgba(215,255,0,0.75) 2px, transparent 2px, transparent 10px)`,
           zIndex: 2, pointerEvents: 'none',
         }}></div>
 
@@ -144,7 +146,7 @@ export default function Home() {
         {/* Tactical White/Grey Dots Grid Overlay */}
         <div style={{
           position: 'absolute', inset: 0,
-          backgroundImage: 'radial-gradient(rgba(255,255,255,0.2) 1px, transparent 1px)',
+          backgroundImage: 'radial-gradient(rgba(255,255,255,0.4) 1.5px, transparent 1.5px)',
           backgroundSize: '40px 40px',
           zIndex: 2, pointerEvents: 'none'
         }}></div>
@@ -154,7 +156,8 @@ export default function Home() {
           position: 'absolute', top: 0, bottom: '80px', left: 0, width: 'clamp(60px, 15vw, 300px)',
           background: 'repeating-linear-gradient(135deg, var(--neon), var(--neon) 20px, transparent 20px, transparent 40px)',
           clipPath: 'polygon(0 0, 100% 0, 60% 100%, 0 100%)',
-          opacity: 1, zIndex: 3
+          opacity: 1, zIndex: 3,
+          filter: 'drop-shadow(0 0 15px rgba(215,255,0,0.6))'
         }}></div>
 
         <div className="container-lg" style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0 1rem', flex: 1, justifyContent: 'center' }}>
@@ -166,7 +169,25 @@ export default function Home() {
             transition={{ duration: 0.8 }}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
           >
-            {/* Title (Like PUBG ESPORTS 2026) */}
+            {/* Small Label above Title */}
+            {settings?.cms_hero_label && (
+              <span style={{ 
+                fontFamily: "'Orbitron', sans-serif", 
+                fontSize: '0.85rem', 
+                fontWeight: 900, 
+                color: '#FFF', 
+                background: 'rgba(215,255,0,0.1)',
+                border: '1px solid rgba(215,255,0,0.3)',
+                padding: '0.3rem 1rem',
+                borderRadius: '50px',
+                marginBottom: '1.5rem',
+                letterSpacing: '0.1em'
+              }}>
+                {settings.cms_hero_label}
+              </span>
+            )}
+
+            {/* Title Line 1 (Like BHIMA ESPORTS) */}
             <h2 style={{ 
               fontFamily: "'Orbitron', sans-serif", 
               fontSize: 'clamp(1.5rem, 4vw, 4rem)', 
@@ -177,10 +198,10 @@ export default function Home() {
               letterSpacing: '2px',
               textShadow: 'none'
             }}>
-              BHIMA ESPORTS
+              {settings?.cms_hero_title_1 || 'BHIMA'}
             </h2>
 
-            {/* Main Massive Subtitle (Like ROAD TO PGC) */}
+            {/* Title Line 2 (Massive) */}
             <h1 style={{ 
               fontFamily: "'Rajdhani', sans-serif", 
               fontSize: 'clamp(2.5rem, 10vw, 12rem)', 
@@ -192,21 +213,65 @@ export default function Home() {
               letterSpacing: '-0.02em',
               textShadow: '0 10px 30px rgba(0,0,0,0.5)'
             }}>
-              DOMINATE
+              {settings?.cms_hero_title_2 || 'ESPORTS'}
             </h1>
-            <h1 style={{ 
-              fontFamily: "'Rajdhani', sans-serif", 
-              fontSize: 'clamp(2.5rem, 10vw, 12rem)', 
-              fontWeight: 900, 
-              color: '#FFFFFF', 
-              textTransform: 'uppercase', 
-              margin: '-0.5rem 0 2rem 0',
-              lineHeight: '1',
-              letterSpacing: '-0.02em',
-              textShadow: '0 10px 30px rgba(0,0,0,0.5)'
-            }}>
-              THE BATTLEFIELD
-            </h1>
+            
+            {/* Title Line 3 (Massive) */}
+            {settings?.cms_hero_title_3 && (
+              <h1 style={{ 
+                fontFamily: "'Rajdhani', sans-serif", 
+                fontSize: 'clamp(2.5rem, 10vw, 12rem)', 
+                fontWeight: 900, 
+                color: '#FFFFFF', 
+                textTransform: 'uppercase', 
+                margin: '-0.5rem 0 2rem 0',
+                lineHeight: '1',
+                letterSpacing: '-0.02em',
+                textShadow: '0 10px 30px rgba(0,0,0,0.5)'
+              }}>
+                {settings.cms_hero_title_3}
+              </h1>
+            )}
+
+            {/* Hero Description */}
+            {settings?.cms_hero_description && (
+              <p style={{
+                maxWidth: '600px',
+                margin: '0 0 2rem 0',
+                color: 'rgba(255,255,255,0.8)',
+                fontSize: '1.1rem',
+                lineHeight: 1.6,
+                fontWeight: 400
+              }}>
+                {settings.cms_hero_description}
+              </p>
+            )}
+
+            {/* Hero Buttons */}
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <Link to={settings?.primary_button_link || '/register'} style={{ textDecoration: 'none' }}>
+                <div style={{
+                  background: 'var(--neon)', color: '#000', padding: '0.8rem 2rem',
+                  fontFamily: "'Orbitron', sans-serif", fontWeight: 900, textTransform: 'uppercase',
+                  fontSize: '1rem', clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+                  transition: 'all 0.3s ease',
+                  border: '1px solid var(--neon)'
+                }}>
+                  {settings?.cms_hero_btn_primary || 'REGISTER NOW'}
+                </div>
+              </Link>
+              <Link to={settings?.secondary_button_link || '/leaderboard'} style={{ textDecoration: 'none' }}>
+                <div style={{
+                  background: 'transparent', color: '#FFF', padding: '0.8rem 2rem',
+                  fontFamily: "'Orbitron', sans-serif", fontWeight: 900, textTransform: 'uppercase',
+                  fontSize: '1rem', clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  transition: 'all 0.3s ease'
+                }}>
+                  {settings?.cms_hero_btn_secondary || 'VIEW LEADERBOARD'}
+                </div>
+              </Link>
+            </div>
           </motion.div>
 
         </div>
@@ -224,10 +289,10 @@ export default function Home() {
         zIndex: 10
       }}>
         {[
-          { title: 'BHIMA Esports Season 1', sub: 'Registrations are now open!' },
-          { title: 'Tournament Hub', sub: 'Explore ongoing battles' },
-          { title: 'Leaderboards Live', sub: 'Check current player standings' },
-          { title: 'Join the Community', sub: 'New challengers arriving' }
+          { title: settings?.cms_home_card1_title || 'BHIMA Esports Season 1', sub: settings?.cms_home_card1_sub || 'Registrations are now open!' },
+          { title: settings?.cms_home_card2_title || 'Tournament Hub', sub: settings?.cms_home_card2_sub || 'Explore ongoing battles' },
+          { title: settings?.cms_home_card3_title || 'Leaderboards Live', sub: settings?.cms_home_card3_sub || 'Check current player standings' },
+          { title: settings?.cms_home_card4_title || 'Join the Community', sub: settings?.cms_home_card4_sub || 'New challengers arriving' }
         ].map((box, i) => (
           <div key={i} style={{ 
             background: 'var(--neon)', 

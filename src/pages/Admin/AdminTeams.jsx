@@ -19,7 +19,6 @@ export default function AdminTeams() {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [deptFilter, setDeptFilter] = useState('');
 
   // Roster Modal
   const [selectedTeam, setSelectedTeam] = useState(null);
@@ -53,7 +52,6 @@ export default function AdminTeams() {
       setLoading(true);
       const data = await api.get('/teams', {
         search: search || undefined,
-        department_id: deptFilter || undefined,
       });
       setTeams(data.teams || data || []);
     } catch (err) {
@@ -65,7 +63,7 @@ export default function AdminTeams() {
 
   useEffect(() => {
     fetchTeams();
-  }, [search, deptFilter]);
+  }, [search]);
 
   const viewRoster = async (team) => {
     setSelectedTeam(team);
@@ -204,21 +202,8 @@ export default function AdminTeams() {
         flexWrap: 'wrap',
         gap: 'var(--space-4)',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-end',
       }}>
-        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          <select
-            className="form-input"
-            value={deptFilter}
-            onChange={(e) => setDeptFilter(e.target.value)}
-            style={{ width: '180px' }}
-          >
-            <option value="">All Departments</option>
-            {DEPARTMENTS.map(d => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
-          </select>
-        </div>
 
         <input
           type="text"
@@ -245,7 +230,6 @@ export default function AdminTeams() {
               <tr>
                 <th>Team ID</th>
                 <th>Team Info</th>
-                <th>Department</th>
                 <th>Captain</th>
                 <th>Status</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
@@ -378,7 +362,7 @@ export default function AdminTeams() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
                 <div className="form-group">
-                  <label className="form-label">Department</label>
+                  <label className="form-label">Academic Department</label>
                   <select
                     name="department_id"
                     className="form-input"

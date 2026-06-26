@@ -9,6 +9,7 @@ import AdminLayout from './components/Admin/AdminLayout';
 import Home from './pages/Home';
 import Tournaments from './pages/Tournaments';
 import Register from './pages/Register';
+import AppProvider from "./context/AppContext";
 
 // Lazy Load Public Pages
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
@@ -53,6 +54,10 @@ const AdminSecurity = lazy(() => import('./pages/Admin/AdminSecurity'));
 const AdminHallOfFame = lazy(() => import('./pages/Admin/AdminHallOfFame'));
 const AdminBackups = lazy(() => import('./pages/Admin/AdminBackups'));
 const AdminDepartments = lazy(() => import('./pages/Admin/AdminDepartments'));
+const AdminFlashNews = lazy(() => import('./pages/Admin/AdminFlashNews'));
+const AdminCMS = lazy(() => import('./pages/Admin/AdminCMS'));
+
+import SEO from './components/SEO';
 
 const PageLoader = () => (
   <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
@@ -60,7 +65,7 @@ const PageLoader = () => (
   </div>
 );
 
-export default function App() {
+function AppContent() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
 
@@ -111,12 +116,14 @@ export default function App() {
             <Route path="certificates" element={<AdminCertificates />} />
             <Route path="achievements" element={<AdminAchievements />} />
             <Route path="announcements" element={<AdminAnnouncements />} />
+            <Route path="flash-news" element={<AdminFlashNews />} />
             <Route path="homepage-cms" element={<AdminHomepageCMS />} />
             <Route path="departments" element={<AdminDepartments />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="security" element={<AdminSecurity />} />
             <Route path="backups" element={<AdminBackups />} />
             <Route path="hall-of-fame" element={<AdminHallOfFame />} />
+            <Route path="cms" element={<AdminCMS />} />
           </Route>
 
           {/* Fallback */}
@@ -126,5 +133,14 @@ export default function App() {
 
       {!isAdminRoute && <Footer />}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <>
+      <SEO />
+      <AppContent />
+    </>
   );
 }

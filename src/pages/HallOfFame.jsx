@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import api from '../utils/api';
 import Card from '../components/UI/Card';
+import { useApp } from '../context/AppContext';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -17,6 +18,7 @@ const itemVariants = {
 };
 
 export default function HallOfFame() {
+  const { settings } = useApp();
   const [entries, setEntries] = useState([]);
   const [mvps, setMvps] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,9 +86,11 @@ export default function HallOfFame() {
           animate={{ width: '40px' }}
           transition={{ duration: 0.5, delay: 0.2 }}
         />
-        <h1 style={{ fontFamily: 'var(--font-heading)', textTransform: 'uppercase', color: 'var(--text)' }}>Hall of Fame</h1>
+        <h1 style={{ fontFamily: 'var(--font-heading)', textTransform: 'uppercase', color: 'var(--text)' }}>
+          {settings?.cms_page_hof_title || 'Hall of Fame'}
+        </h1>
         <p style={{ fontFamily: 'var(--font-body)', color: 'var(--text-secondary)' }}>
-          Immortalized legends of Bhima Esports.
+          {settings?.cms_page_hof_sub || 'Immortalized legends of Bhima Esports.'}
         </p>
       </div>
 

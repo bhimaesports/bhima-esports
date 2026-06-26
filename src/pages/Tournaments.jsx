@@ -5,6 +5,7 @@ import api from '../utils/api';
 import { formatDate } from '../utils/helpers';
 import Badge from '../components/UI/Badge';
 import Button from '../components/UI/Button';
+import { useApp } from '../context/AppContext';
 
 // Variants for staggered animations
 const containerVariants = {
@@ -21,6 +22,7 @@ const itemVariants = {
 };
 
 export default function Tournaments() {
+  const { settings } = useApp();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
@@ -61,9 +63,11 @@ export default function Tournaments() {
           animate={{ width: '40px' }}
           transition={{ duration: 0.5, delay: 0.2 }}
         />
-        <h1 style={{ fontFamily: 'var(--font-heading)', textTransform: 'uppercase', color: 'var(--text)' }}>Tournaments</h1>
+        <h1 style={{ fontFamily: 'var(--font-heading)', textTransform: 'uppercase', color: 'var(--text)' }}>
+          {settings?.cms_page_tournaments_title || 'Tournaments'}
+        </h1>
         <p style={{ fontFamily: 'var(--font-body)', color: 'var(--text-secondary)' }}>
-          Participate in tournaments, challenge rivals and climb the ranks.
+          {settings?.cms_page_tournaments_sub || 'Participate in tournaments, challenge rivals and climb the ranks.'}
         </p>
       </div>
 

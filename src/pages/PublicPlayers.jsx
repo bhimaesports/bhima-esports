@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../utils/api';
 import Card from '../components/UI/Card';
+import { useApp } from '../context/AppContext';
 
 export default function PublicPlayers() {
+  const { settings } = useApp();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -45,8 +47,8 @@ export default function PublicPlayers() {
       <div className="container">
         <div className="section-header" style={{ marginBottom: '2rem' }}>
           <div className="accent-line" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }} />
-          <h2>ROSTER LIST</h2>
-          <p>The warriors of Bhima Esports.</p>
+          <h2>{settings?.cms_page_players_title || 'ROSTER LIST'}</h2>
+          <p>{settings?.cms_page_players_sub || 'The warriors of Bhima Esports.'}</p>
         </div>
 
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '3rem' }}>

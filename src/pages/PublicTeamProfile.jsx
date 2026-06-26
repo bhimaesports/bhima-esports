@@ -132,7 +132,6 @@ export default function PublicTeamProfile() {
               
               <div style={{ display: 'flex', gap: '2rem', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontSize: '1rem', marginTop: '1rem' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Zap size={16} color="var(--neon)" /> ID: {team.team_id}</span>
-                {team.department_name && <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Shield size={16} color="var(--neon)" /> DIV: {team.department_name}</span>}
                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Activity size={16} color="var(--neon)" /> WIN RATE: {team.win_rate != null ? `${team.win_rate}%` : '0%'}</span>
               </div>
             </div>
