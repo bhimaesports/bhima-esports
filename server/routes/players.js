@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
 import { broadcastEvent } from './sse.js';
 import bcrypt from 'bcryptjs';
+import { recalculateAllPoints } from '../utils/pointCalculator.js';
 
 const router = Router();
 
@@ -123,7 +124,7 @@ router.post('/', authenticate, upload.fields([{ name: 'photo', maxCount: 1 }, { 
 });
 
 // PUT /api/players/:id - update player (admin)
-router.put('/:id', authenticate, upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'jersey', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), (req, res) => {
+router.put('/:id', authenticate, upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'jersey', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), async (req, res) => {
   try {
     const db = getDb();
     const { id } = req.params;
@@ -175,8 +176,7 @@ router.put('/:id', authenticate, upload.fields([{ name: 'photo', maxCount: 1 }, 
     const updated = db.get('SELECT * FROM players WHERE id = ?', [Number(id)]);
     
     // Auto recalculate points when stats change
-    const { recalculateAllPoints } = await import('../utils/pointCalculator.js');
-    recalculateAllPoints();
+await recalculateAllPoints();
 
     broadcastEvent('entity_update', { entity: 'players' });
     broadcastEvent('entity_update', { type: 'leaderboards' });
