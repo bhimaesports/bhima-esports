@@ -21,11 +21,9 @@ class Database {
   }
 
   // Schedule a debounced save (50ms) so rapid writes don't hammer the disk
+  // NOTE: Changed to synchronous save to guarantee permanent data persistence.
   _scheduleSave() {
-    if (this._saveTimeout) clearTimeout(this._saveTimeout);
-    this._saveTimeout = setTimeout(() => {
-      this.saveToFile();
-    }, 50);
+    this.saveToFile();
   }
 
   // Persist database to disk immediately
@@ -112,7 +110,11 @@ function createTables(database) {
     CREATE TABLE IF NOT EXISTS departments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      code TEXT UNIQUE NOT NULL
+      code TEXT UNIQUE NOT NULL,
+      logo_url TEXT,
+      banner_url TEXT,
+      color TEXT,
+      description TEXT
     );
 
     CREATE TABLE IF NOT EXISTS teams (
@@ -155,6 +157,9 @@ function createTables(database) {
       total_points INTEGER DEFAULT 0,
       booyahs INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
+      photo_url TEXT,
+      jersey_url TEXT,
+      banner_url TEXT,
       FOREIGN KEY (department_id) REFERENCES departments(id),
       FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
     );
@@ -252,7 +257,8 @@ function createTables(database) {
     CREATE TABLE IF NOT EXISTS certificates (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       cert_id TEXT UNIQUE NOT NULL,
-      type TEXT NOT NULL CHECK(type IN ('participation','winner','mvp')),
+      type TEXT NOT NULL,
+      player_id INTEGER,
       player_name TEXT NOT NULL,
       roll_number TEXT,
       team_name TEXT,
@@ -260,7 +266,22 @@ function createTables(database) {
       tournament_name TEXT,
       tournament_date TEXT,
       issued_date TEXT DEFAULT (date('now')),
-      pdf_path TEXT
+      pdf_path TEXT,
+      achievement_badge TEXT,
+      achievement_level TEXT,
+      FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS achievements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      player_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      award_type TEXT NOT NULL,
+      tournament_name TEXT,
+      issued_date TEXT DEFAULT (date('now')),
+      pdf_path TEXT,
+      achievement_code TEXT UNIQUE,
+      FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS announcements (
@@ -270,8 +291,34 @@ function createTables(database) {
       type TEXT DEFAULT 'info' CHECK(type IN ('info','warning','success','urgent')),
       is_pinned INTEGER DEFAULT 0,
       is_active INTEGER DEFAULT 1,
+      image_url TEXT,
+      scheduled_for TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS flash_news (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      text TEXT NOT NULL,
+      is_active INTEGER DEFAULT 1,
+      is_pinned INTEGER DEFAULT 0,
+      scheduled_for TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS player_leaderboard (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      player_id INTEGER NOT NULL,
+      tournament_id INTEGER,
+      department_id INTEGER,
+      season TEXT,
+      matches INTEGER DEFAULT 0,
+      wins INTEGER DEFAULT 0,
+      total_kills INTEGER DEFAULT 0,
+      total_points INTEGER DEFAULT 0,
+      FOREIGN KEY (player_id) REFERENCES players(id),
+      FOREIGN KEY (tournament_id) REFERENCES tournaments(id),
+      FOREIGN KEY (department_id) REFERENCES departments(id)
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -359,7 +406,51 @@ function createTables(database) {
       total_matches INTEGER,
       archived_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS homepage_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT UNIQUE NOT NULL,
+      value TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS sponsors (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      logo_url TEXT NOT NULL,
+      link TEXT,
+      display_order INTEGER DEFAULT 0,
+      is_active INTEGER DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS partners (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      logo_url TEXT NOT NULL,
+      type TEXT DEFAULT 'partner',
+      link TEXT,
+      display_order INTEGER DEFAULT 0,
+      is_active INTEGER DEFAULT 1
+    );
   `);
+
+  // Seed default homepage settings if empty
+  const hsCount = db.get('SELECT COUNT(*) as count FROM homepage_settings').count;
+  if (hsCount === 0) {
+    const defaultSettings = [
+      { key: 'hero_title', value: 'BHIMA ESPORTS' },
+      { key: 'hero_subtitle', value: 'Where Legends Are Forged' },
+      { key: 'hero_video_url', value: '' },
+      { key: 'hero_banner_url', value: '' },
+      { key: 'primary_button_text', value: 'Register Now' },
+      { key: 'primary_button_link', value: '/register' },
+      { key: 'secondary_button_text', value: 'View Leaderboard' },
+      { key: 'secondary_button_link', value: '/leaderboard' },
+      { key: 'flash_news_enabled', value: '1' }
+    ];
+    for (const s of defaultSettings) {
+      db.run('INSERT INTO homepage_settings (key, value) VALUES (?, ?)', [s.key, s.value]);
+    }
+  }
 }
 
 // ─── Initialize ──────────────────────────────────────────────────────────────
@@ -414,7 +505,10 @@ export async function initializeDatabase() {
     { name: 'qr_code_enabled', type: "INTEGER DEFAULT 1" },
     { name: 'sponsor_logos', type: "TEXT" },
     { name: 'position', type: "TEXT" },
-    { name: 'award_type', type: "TEXT" }
+    { name: 'award_type', type: "TEXT" },
+    { name: 'player_id', type: "INTEGER" },
+    { name: 'achievement_badge', type: "TEXT" },
+    { name: 'achievement_level', type: "TEXT" }
   ];
 
   for (const col of newCols) {
@@ -425,21 +519,83 @@ export async function initializeDatabase() {
     }
   }
 
-  const playerCols = [
-    { name: 'total_damage', type: 'INTEGER DEFAULT 0' },
-    { name: 'headshot_percentage', type: 'REAL DEFAULT 0' },
-    { name: 'average_survival_time', type: 'REAL DEFAULT 0' },
-    { name: 'total_points', type: 'INTEGER DEFAULT 0' },
-    { name: 'booyahs', type: 'INTEGER DEFAULT 0' }
-  ];
-  for (const col of playerCols) {
-    try {
-      db.run(`ALTER TABLE players ADD COLUMN ${col.name} ${col.type}`);
-    } catch (e) {}
+  // Migration for team_leaderboard is_qualified
+  try {
+    db.run("ALTER TABLE team_leaderboard ADD COLUMN is_qualified INTEGER DEFAULT 0");
+  } catch (e) {
+    // Column already exists
   }
 
+  // Backfill missing teams into leaderboard
+  try {
+    db.run("INSERT OR IGNORE INTO team_leaderboard (team_id) SELECT id FROM teams WHERE status = 'active'");
+  } catch (e) {
+    // Ignore
+  }
+
+    const playerCols = [
+      'total_damage INTEGER DEFAULT 0',
+      'headshot_percentage REAL DEFAULT 0',
+      'average_survival_time REAL DEFAULT 0',
+      'total_points INTEGER DEFAULT 0',
+      'booyahs INTEGER DEFAULT 0',
+      'player_login_id TEXT',
+      'password_hash TEXT',
+      'approval_status TEXT DEFAULT "pending" CHECK(approval_status IN ("pending", "approved", "rejected"))',
+      'real_name TEXT',
+      'role TEXT',
+      'country TEXT',
+      'photo_url TEXT',
+      'jersey_url TEXT',
+      'banner_url TEXT'
+    ];
+
+    for (const col of playerCols) {
+      try {
+        db.run(`ALTER TABLE players ADD COLUMN ${col}`);
+        console.log(`✅ Added column ${col.split(' ')[0]} to players`);
+      } catch (e) {
+        // Ignored
+      }
+    }
+
+    const deptCols = [
+      'logo_url TEXT',
+      'banner_url TEXT',
+      'color TEXT',
+      'description TEXT'
+    ];
+    for (const col of deptCols) {
+      try {
+        db.run(`ALTER TABLE departments ADD COLUMN ${col}`);
+        console.log(`✅ Added column ${col.split(' ')[0]} to departments`);
+      } catch (e) {}
+    }
+
+  // New Teams columns
+  try { db.run(`ALTER TABLE teams ADD COLUMN banner_url TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE teams ADD COLUMN coach_name TEXT`); } catch(e) {}
+
+  // New Players columns
+  try { db.run(`ALTER TABLE players ADD COLUMN real_name TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE players ADD COLUMN role TEXT`); } catch(e) {}
+
+  // New Tournaments columns
+  try { db.run(`ALTER TABLE tournaments ADD COLUMN banner_url TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE tournaments ADD COLUMN cover_image TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE tournaments ADD COLUMN prize_pool TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE tournaments ADD COLUMN maps TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE tournaments ADD COLUMN match_format TEXT`); } catch(e) {}
+
+  // New Matches columns
+  try { db.run(`ALTER TABLE matches ADD COLUMN time TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE matches ADD COLUMN venue TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE matches ADD COLUMN description TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE matches ADD COLUMN thumbnail_url TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE matches ADD COLUMN poster_url TEXT`); } catch(e) {}
+
   db.saveToFile();
-  console.log('✅ Migrated database: added advanced columns to certificates & players tables');
+  console.log('✅ Migrated database: added advanced columns to certificates, players, teams & matches tables');
   return db;
 }
 
@@ -462,5 +618,18 @@ export async function restoreDatabase(backupPath) {
   }
   throw new Error('Backup file does not exist.');
 }
+
+// Ensure database is saved on process exit or nodemon restart
+function handleExit() {
+  if (db) {
+    db.saveToFile();
+    console.log('💾 Database forcefully saved on exit.');
+  }
+}
+process.on('exit', handleExit);
+process.on('SIGINT', () => { handleExit(); process.exit(0); });
+process.on('SIGTERM', () => { handleExit(); process.exit(0); });
+process.on('SIGUSR1', () => { handleExit(); process.exit(0); });
+process.on('SIGUSR2', () => { handleExit(); process.exit(0); }); // Nodemon restart signal
 
 export default { initializeDatabase, getDb, restoreDatabase };

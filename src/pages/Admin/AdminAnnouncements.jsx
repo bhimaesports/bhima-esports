@@ -17,7 +17,9 @@ export default function AdminAnnouncements() {
     type: 'info',
     is_pinned: false,
     is_active: true,
+    scheduled_for: '',
   });
+  const [imageFile, setImageFile] = useState(null);
 
   const fetchAnnouncements = async () => {
     try {
@@ -43,7 +45,9 @@ export default function AdminAnnouncements() {
       type: 'info',
       is_pinned: false,
       is_active: true,
+      scheduled_for: '',
     });
+    setImageFile(null);
     setModalOpen(true);
   };
 
@@ -55,7 +59,9 @@ export default function AdminAnnouncements() {
       type: a.type || 'info',
       is_pinned: a.is_pinned === 1 || a.is_pinned === true,
       is_active: a.is_active === 1 || a.is_active === true,
+      scheduled_for: a.scheduled_for || '',
     });
+    setImageFile(null);
     setModalOpen(true);
   };
 
@@ -69,19 +75,29 @@ export default function AdminAnnouncements() {
     setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setImageFile(e.target.files[0]);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = {
-      ...formData,
-      is_pinned: formData.is_pinned ? 1 : 0,
-      is_active: formData.is_active ? 1 : 0,
-    };
+    
+    const fd = new FormData();
+    fd.append('title', formData.title);
+    fd.append('content', formData.content);
+    fd.append('type', formData.type);
+    fd.append('is_pinned', formData.is_pinned ? 1 : 0);
+    fd.append('is_active', formData.is_active ? 1 : 0);
+    if (formData.scheduled_for) fd.append('scheduled_for', formData.scheduled_for);
+    if (imageFile) fd.append('image', imageFile);
 
     try {
       if (editId) {
-        await api.put(`/announcements/${editId}`, payload);
+        await api.put(`/announcements/${editId}`, fd);
       } else {
-        await api.post('/announcements', payload);
+        await api.post('/announcements', fd);
       }
       setModalOpen(false);
       fetchAnnouncements();
@@ -235,6 +251,27 @@ export default function AdminAnnouncements() {
                   value={formData.content}
                   onChange={handleTextChange}
                   style={{ resize: 'none' }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Banner / Poster Image (Optional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="form-input"
+                  onChange={handleFileChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Schedule For (Optional)</label>
+                <input
+                  type="datetime-local"
+                  name="scheduled_for"
+                  className="form-input"
+                  value={formData.scheduled_for}
+                  onChange={handleTextChange}
                 />
               </div>
 

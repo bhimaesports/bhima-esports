@@ -53,12 +53,13 @@ export default function AdminMatchResults() {
     e.preventDefault();
     if (!selectedTourneyId || !matchNumber) return;
     try {
-      await api.post('/matches', {
-        tournament_id: parseInt(selectedTourneyId),
-        match_number: parseInt(matchNumber),
-        date: matchDate || null,
-        status: 'upcoming',
-      });
+      const formData = new FormData();
+      formData.append('tournament_id', selectedTourneyId);
+      formData.append('match_number', matchNumber);
+      if (matchDate) formData.append('date', matchDate);
+      formData.append('status', 'upcoming');
+
+      await api.post('/matches', formData);
       setMatchNumber('');
       setMatchDate('');
       fetchMatches();
@@ -155,11 +156,16 @@ export default function AdminMatchResults() {
               className="form-input"
               value={selectedTourneyId}
               onChange={(e) => setSelectedTourneyId(e.target.value)}
-              style={{ width: '220px' }}
+              style={{ width: '220px', cursor: tournaments.length === 0 ? 'not-allowed' : 'pointer' }}
+              disabled={tournaments.length === 0}
             >
-              {tournaments.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
+              {tournaments.length === 0 ? (
+                <option value="">-- No Tournaments Found --</option>
+              ) : (
+                tournaments.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))
+              )}
             </select>
           </div>
 
@@ -214,11 +220,12 @@ export default function AdminMatchResults() {
               <input
                 type="number"
                 className="form-input"
-                required
                 min="1"
-                placeholder="e.g. 1"
                 value={matchNumber}
                 onChange={(e) => setMatchNumber(e.target.value)}
+                placeholder="e.g. 1"
+                required
+                disabled={tournaments.length === 0}
               />
             </div>
 
@@ -229,10 +236,11 @@ export default function AdminMatchResults() {
                 className="form-input"
                 value={matchDate}
                 onChange={(e) => setMatchDate(e.target.value)}
+                disabled={tournaments.length === 0}
               />
             </div>
 
-            <Button type="submit" variant="primary" style={{ width: '100%' }}>
+            <Button variant="primary" type="submit" disabled={tournaments.length === 0} style={{ marginTop: 'var(--space-2)' }}>
               Create Match Slot
             </Button>
           </form>

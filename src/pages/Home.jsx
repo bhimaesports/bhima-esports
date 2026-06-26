@@ -1,401 +1,340 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import api from '../utils/api';
-import { DEPARTMENTS, formatDate } from '../utils/helpers';
-import Particles from '../components/UI/Particles';
-import CountdownTimer from '../components/UI/CountdownTimer';
-import Badge from '../components/UI/Badge';
-import Button from '../components/UI/Button';
 import { useApp } from '../context/AppContext';
+
 export default function Home() {
-  const defaultHomepageConfig = {
-    hero: {
-      tagline: 'Inter-Department Esports Championship',
-      title1: 'DOMINATE THE',
-      title2: 'BATTLEFIELD',
-      subtitle: '8 departments. 1 champion. Compete in FreeFire, Bgmi & Cod for glory, BE Points, and eternal bragging rights.',
-      video_url: 'https://res.cloudinary.com/dns0nlupj/video/upload/can_you_make_this_logo_as_an_g_bi3zdj.mp4#t=0,3'
-    },
-    stats: [
-      { id: '1', source: 'teams.total', label: 'Teams', visible: true },
-      { id: '2', source: 'players.total', label: 'Players', visible: true },
-      { id: '3', source: 'tournaments.total', label: 'Tournaments', visible: true },
-      { id: '4', source: 'departments', label: 'Departments', visible: true }
-    ],
-    visibility: {
-      announcements: true,
-      departments: true,
-      cta: true
+  const { announcements, settings } = useApp();
+  const navigate = useNavigate();
+  const [leaderboard, setLeaderboard] = useState(null);
+  const [tournaments, setTournaments] = useState([]);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Settings Parsing
+  const { heroSlides, videos, roadToGlory, widgets } = React.useMemo(() => {
+    const defaults = {
+      heroSlides: [],
+      videos: [],
+      roadToGlory: [],
+      widgets: { showSchedule: true, showStandings: true, quickInfo: [] }
+    };
+    if (settings?.homepage_config) {
+      try {
+        const parsed = JSON.parse(settings.homepage_config);
+        return {
+          heroSlides: parsed.heroSlides?.length ? parsed.heroSlides : defaults.heroSlides,
+          videos: parsed.videos || defaults.videos,
+          roadToGlory: parsed.roadToGlory || defaults.roadToGlory,
+          widgets: { ...defaults.widgets, ...(parsed.widgets || {}) }
+        };
+      } catch (e) {
+        console.error('Error parsing config:', e);
+      }
     }
-  };
+    return defaults;
+  }, [settings]);
 
-  const { announcements, stats, settings } = useApp();
-  const [nextTournament, setNextTournament] = useState(null);
-  const videoRef = useRef(null);
-
-  const config = settings?.homepage_config ? JSON.parse(settings.homepage_config) : defaultHomepageConfig;
-
+  // Secret Admin Access Listener
   useEffect(() => {
-    api.get('/tournaments', { status: 'upcoming', limit: 1 })
-      .then((d) => {
-        const t = d?.tournaments?.[0] || d?.[0];
-        if (t) setNextTournament(t);
-      })
-      .catch(() => {});
+    let keyBuffer = '';
+    const secretCode = 'ruttu015556';
+    
+    const handleKeyDown = (e) => {
+      keyBuffer += e.key.toLowerCase();
+      if (keyBuffer.length > secretCode.length) {
+        keyBuffer = keyBuffer.slice(-secretCode.length);
+      }
+      if (keyBuffer === secretCode) {
+        navigate('/admin/login');
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
+  // Data Fetching
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [lbRes, tourRes] = await Promise.all([
+          api.get('/public/leaderboards').catch(() => null),
+          api.get('/public/tournaments').catch(() => null)
+        ]);
+        if (lbRes) setLeaderboard(lbRes);
+        if (tourRes && tourRes.tournaments) setTournaments(tourRes.tournaments);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchData();
+
+    const handleEntityUpdate = (e) => {
+      if (['tournament', 'match', 'team', 'player'].includes(e.detail?.entityType)) {
+        fetchData();
+      }
+    };
+    window.addEventListener('entity_update', handleEntityUpdate);
+    return () => window.removeEventListener('entity_update', handleEntityUpdate);
   }, []);
 
+  // Hero Slider Timer
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    if (heroSlides.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [heroSlides.length]);
 
-    let frameId;
-    const checkLoop = () => {
-      // Loop video back to start if it crosses 3 seconds
-      if (video.currentTime >= 3) {
-        video.currentTime = 0;
-        video.play().catch(() => {});
-      }
-      frameId = requestAnimationFrame(checkLoop);
-    };
-
-    frameId = requestAnimationFrame(checkLoop);
-
-    return () => {
-      cancelAnimationFrame(frameId);
-    };
-  }, [config.hero.video_url]); // Re-run if video changes
-
-  const activeAnnouncements = (announcements || []).filter((a) => a.active !== false).slice(0, 3);
-
-  const getStatValue = (source) => {
-    if (source === 'departments') return stats?.departmentStats?.length || 0;
-    const parts = source.split('.');
-    let val = stats?.stats;
-    for (let p of parts) {
-      if (val === undefined || val === null) return 0;
-      val = val[p];
-    }
-    return val || 0;
-  };
+  const activeAnnouncements = (announcements || []).filter(a => a.active !== false).slice(0, 6);
+  const liveTournaments = tournaments.filter(t => t.status === 'ongoing').slice(0, 3);
+  const topTeams = leaderboard && leaderboard.topTeams ? leaderboard.topTeams.slice(0, 5) : [];
 
   return (
-    <div className="page-wrapper">
-      {/* ── Hero Section ──────────────────────────────────────── */}
-      <section style={{
-        position: 'relative',
-        minHeight: '100vh',
-        width: '100vw',
+    <div className="page-wrapper" style={{ background: '#111', color: '#FFF', minHeight: '100vh', overflowX: 'hidden', paddingBottom: '4rem', paddingTop: 0 }}>
+      
+      {/* 1. Hero Banner */}
+      <section style={{ 
+        position: 'relative', 
+        width: '100%', 
+        minHeight: 'calc(100vh - 60px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
-        background: '#050505',
+        background: '#080808'
       }}>
+        
         {/* Background Video */}
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          loop
+        <video 
+          autoPlay 
+          loop 
+          muted 
           playsInline
-          preload="auto"
           style={{
             position: 'absolute',
-            top: 0,
-            left: 0,
             width: '100%',
             height: '100%',
             objectFit: 'cover',
-            zIndex: 1,
+            zIndex: 0
           }}
-          poster="/assets/hero-fallback.jpg"
-          key={config.hero.video_url}
         >
-          <source src={config.hero.video_url} type="video/mp4" />
+          <source src={heroSlides[currentSlide]?.bgImage || "/assets/hero-bg.mp4"} type="video/mp4" />
         </video>
 
-        {/* Cinematic dark overlay + bottom gradient blend */}
+        {/* Dark Overlay for Readability & Tactical Grid */}
         <div style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(180deg, rgba(5, 5, 5, 0.5) 0%, rgba(5, 5, 5, 0.65) 60%, rgba(15, 15, 35, 1) 100%)',
-          zIndex: 2,
-        }} />
+          background: 'rgba(10, 10, 10, 0.85)', /* Heavy dark overlay to make yellow pop */
+          zIndex: 1
+        }}></div>
 
-        <Particles count={25} style={{ zIndex: 3 }} />
+        {/* Tactical White/Grey Dots Grid Overlay */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: 'radial-gradient(rgba(255,255,255,0.15) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+          zIndex: 2, pointerEvents: 'none'
+        }}></div>
 
-        {/* Centered Content Container */}
-        <div className="container" style={{
-          position: 'relative',
-          zIndex: 4,
-          textAlign: 'center',
-          paddingTop: 'calc(var(--navbar-height) + var(--space-4))',
-          paddingBottom: 'var(--space-12)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
+        {/* Left Yellow Chevrons */}
+        <div style={{
+          position: 'absolute', top: 0, bottom: '80px', left: 0, width: '300px',
+          background: 'repeating-linear-gradient(135deg, var(--neon), var(--neon) 20px, transparent 20px, transparent 40px)',
+          clipPath: 'polygon(0 0, 100% 0, 60% 100%, 0 100%)',
+          opacity: 1, zIndex: 3
+        }}></div>
+
+        <div className="container-lg" style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0 1rem' }}>
+          
+          <motion.div
+            key={currentSlide}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+          >
+            {/* Title (Like PUBG ESPORTS 2026) */}
+            <h2 style={{ 
+              fontFamily: "'Orbitron', sans-serif", 
+              fontSize: 'clamp(2rem, 4vw, 4rem)', 
+              fontWeight: 900, 
+              color: 'var(--neon)', 
+              textTransform: 'uppercase', 
+              margin: '0 0 -0.5rem 0',
+              letterSpacing: '2px',
+              textShadow: 'none'
+            }}>
+              BHIMA ESPORTS
+            </h2>
+
+            {/* Main Massive Subtitle (Like ROAD TO PGC) */}
+            <h1 style={{ 
+              fontFamily: "'Rajdhani', sans-serif", 
+              fontSize: 'clamp(4rem, 10vw, 12rem)', 
+              fontWeight: 900, 
+              color: '#FFFFFF', 
+              textTransform: 'uppercase', 
+              margin: '0',
+              lineHeight: '1',
+              letterSpacing: '-0.02em',
+              textShadow: '0 10px 30px rgba(0,0,0,0.5)'
+            }}>
+              DOMINATE
+            </h1>
+            <h1 style={{ 
+              fontFamily: "'Rajdhani', sans-serif", 
+              fontSize: 'clamp(4rem, 10vw, 12rem)', 
+              fontWeight: 900, 
+              color: '#FFFFFF', 
+              textTransform: 'uppercase', 
+              margin: '-1rem 0 2rem 0',
+              lineHeight: '1',
+              letterSpacing: '-0.02em',
+              textShadow: '0 10px 30px rgba(0,0,0,0.5)'
+            }}>
+              THE BATTLEFIELD
+            </h1>
+          </motion.div>
+
+        </div>
+
+        {/* 4-Box Yellow Info Ticker Bar (Absolute Bottom of Hero) */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0, left: 0, right: 0,
+          background: 'var(--neon)',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '1px', /* Thin border lines between boxes */
+          borderTop: '1px solid rgba(0,0,0,0.1)',
+          zIndex: 10
         }}>
-          {/* Glowing Animated Hero Logo */}
-          <div style={{
-            marginBottom: 'var(--space-6)',
-            animation: 'logoPulse 3s infinite ease-in-out, slideUp 0.8s ease both',
-          }}>
-            <img
-              src="/assets/logo.png"
-              alt="Bhima Esports Logo"
-              style={{
-                height: 'clamp(90px, 16vw, 140px)',
-                width: 'clamp(90px, 16vw, 140px)',
-                objectFit: 'contain',
-                filter: 'drop-shadow(0 0 15px rgba(215,255,0,0.45))',
-              }}
-            />
-          </div>
-
-          {/* Tagline */}
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 'var(--space-2)',
-            padding: '0.375rem 1rem',
-            background: 'rgba(215,255,0,0.06)',
-            border: '1px solid rgba(215,255,0,0.15)',
-            borderRadius: 'var(--radius-full)',
-            marginBottom: 'var(--space-6)',
-            animation: 'slideUp 0.6s ease both 0.2s',
-          }}>
-            <span style={{ fontSize: '0.75rem' }}>⚡</span>
-            <span style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 'var(--text-xs)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              color: 'var(--neon)',
-            }}>
-              {config.hero.tagline}
-            </span>
-          </div>
-
-          {/* Main Title */}
-          <h1 style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: 'clamp(2.5rem, 7.5vw, 5rem)',
-            fontWeight: 900,
-            lineHeight: 1.05,
-            textTransform: 'uppercase',
-            marginBottom: 'var(--space-6)',
-            animation: 'heroTextReveal 0.8s ease both 0.4s',
-          }}>
-            <span style={{ color: 'var(--text)' }}>{config.hero.title1}</span>
-            <br />
-            <span className="gradient-text">{config.hero.title2}</span>
-          </h1>
-
-          {/* Accent line */}
-          <div style={{
-            width: 80, height: 3,
-            background: 'var(--neon)',
-            margin: '0 auto var(--space-6)',
-            borderRadius: 'var(--radius-full)',
-            animation: 'heroLineExpand 0.6s ease both 0.6s',
-            transformOrigin: 'center',
-          }} />
-
-          {/* Subtitle */}
-          <p style={{
-            fontSize: 'var(--text-base)',
-            color: 'var(--text-secondary)',
-            maxWidth: 560,
-            margin: '0 auto var(--space-8)',
-            lineHeight: 1.7,
-            animation: 'heroTextReveal 0.8s ease both 0.6s',
-          }}>
-            {config.hero.subtitle}
-          </p>
-
-          {/* CTA Buttons */}
-          <div style={{
-            display: 'flex',
-            gap: 'var(--space-4)',
-            justifyContent: 'center',
-            flexWrap: 'wrap',
-            marginBottom: 'var(--space-8)',
-            animation: 'heroTextReveal 0.8s ease both 0.8s',
-          }}>
-            <Link to="/register">
-              <Button variant="primary" size="lg">Register Now</Button>
-            </Link>
-            <Link to="/tournaments">
-              <Button variant="outline" size="lg">View Tournaments</Button>
-            </Link>
-          </div>
-
-          {/* Countdown */}
-          {nextTournament && (
-            <div style={{ animation: 'heroTextReveal 0.8s ease both 1s' }}>
-              <CountdownTimer
-                targetDate={nextTournament.start_date || nextTournament.startDate || new Date(Date.now() + 7 * 86400000).toISOString()}
-                label={nextTournament.name || 'Next Tournament'}
-              />
+          {[
+            { title: 'BHIMA Esports Season 1', sub: 'Registrations are now open!' },
+            { title: 'Tournament Hub', sub: 'Explore ongoing battles' },
+            { title: 'Leaderboards Live', sub: 'Check current player standings' },
+            { title: 'Join the Community', sub: 'New challengers arriving' }
+          ].map((box, i) => (
+            <div key={i} style={{ background: 'var(--neon)', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid rgba(0,0,0,0.1)' }}>
+               <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 800, color: '#000', fontSize: '1rem', marginBottom: '0.25rem', lineHeight: 1.2 }}>{box.title}</span>
+               <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: '0.9rem', color: '#333', fontWeight: 600 }}>{box.sub}</span>
             </div>
-          )}
+          ))}
         </div>
       </section>
 
-      {/* ── Stats Strip ───────────────────────────────────────── */}
-      <section style={{
-        borderTop: '1px solid var(--border)',
-        borderBottom: '1px solid var(--border)',
-        background: 'rgba(215,255,0,0.02)',
-        padding: 'var(--space-8) 0',
-      }}>
-        <div className="container">
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-            gap: 'var(--space-6)',
-            textAlign: 'center',
-          }}>
-            {config.stats.filter(s => s.visible).map((s, i) => (
-              <div key={s.id} className={`animate-in stagger-${i + 1}`}>
-                <div style={{
-                  fontFamily: 'var(--font-heading)',
-                  fontSize: 'var(--text-3xl)',
-                  fontWeight: 800,
-                  color: 'var(--neon)',
-                  lineHeight: 1,
-                  marginBottom: 'var(--space-1)',
-                }}>
-                  {getStatValue(s.source)}
-                </div>
-                <div style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 'var(--text-xs)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  color: 'var(--text-secondary)',
-                }}>
-                  {s.label}
-                </div>
-              </div>
-            ))}
+      <div className="container-lg" style={{ padding: '4rem 1rem', display: 'grid', gridTemplateColumns: '1fr', gap: '4rem' }}>
+        
+        {/* LATEST NEWS & ANNOUNCEMENTS */}
+        <section>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid #333', paddingBottom: '1rem', marginBottom: '2rem' }}>
+            <h2 style={{ margin: 0, fontFamily: "'Montserrat', sans-serif", fontSize: '2rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-1px' }}>
+              LATEST <span style={{ color: 'var(--neon)' }}>NEWS</span>
+            </h2>
           </div>
-        </div>
-      </section>
 
-      {/* ── Announcements ─────────────────────────────────────── */}
-      {activeAnnouncements.length > 0 && (
-        <section className="page-section">
-          <div className="container">
-            <div className="section-header">
-              <div className="accent-line" />
-              <h2>Latest Announcements</h2>
-              <p>Stay updated with the latest news and updates</p>
-            </div>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-              gap: 'var(--space-4)',
-            }}>
-              {activeAnnouncements.map((ann, i) => (
-                <div key={ann.id || i} className={`card card-glow animate-in stagger-${i + 1}`}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
-                    <Badge variant={ann.type === 'urgent' ? 'banned' : ann.type === 'event' ? 'upcoming' : 'neon'}>
-                      {ann.type || 'INFO'}
-                    </Badge>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                      {formatDate(ann.created_at || ann.createdAt)}
-                    </span>
+          {activeAnnouncements.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '2rem' }}>
+              {activeAnnouncements.map((a, i) => (
+                <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} style={{ background: '#1A1A1A', border: '1px solid #333', cursor: 'pointer', transition: 'transform 0.2s', position: 'relative', overflow: 'hidden' }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                  {/* Faux Image Area */}
+                  <div style={{ height: '180px', background: 'linear-gradient(45deg, #111, #222)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                    <span style={{ fontSize: '3rem', opacity: 0.1 }}>📰</span>
+                    <div style={{ position: 'absolute', top: '1rem', left: '1rem', background: 'var(--neon)', color: '#000', padding: '0.25rem 0.75rem', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase' }}>UPDATE</div>
                   </div>
-                  <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, marginBottom: 'var(--space-2)' }}>
-                    {ann.title}
-                  </h3>
-                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                    {ann.content || ann.message}
-                  </p>
+                  <div style={{ padding: '1.5rem' }}>
+                    <h3 style={{ margin: '0 0 1rem 0', fontFamily: "'Montserrat', sans-serif", fontSize: '1.2rem', fontWeight: 800, lineHeight: 1.3 }}>{a.title}</h3>
+                    <p style={{ margin: 0, color: '#888', fontSize: '0.95rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.content}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ padding: '4rem', textAlign: 'center', background: '#1A1A1A', border: '1px dashed #333', color: '#666', fontFamily: "'Rajdhani', sans-serif", fontSize: '1.2rem', textTransform: 'uppercase' }}>NO RECENT NEWS</div>
+          )}
+        </section>
+
+        {/* VIDEOS SECTION */}
+        {videos && videos.length > 0 && (
+          <section>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid #333', paddingBottom: '1rem', marginBottom: '2rem' }}>
+              <h2 style={{ margin: 0, fontFamily: "'Montserrat', sans-serif", fontSize: '2rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-1px' }}>
+                FEATURED <span style={{ color: 'var(--neon)' }}>VIDEOS</span>
+              </h2>
+            </div>
+            <div style={{ display: 'flex', gap: '2rem', overflowX: 'auto', paddingBottom: '1rem', scrollbarWidth: 'thin', scrollbarColor: 'var(--neon) #222' }}>
+              {videos.map(v => (
+                <div key={v.id} style={{ flex: '0 0 350px' }}>
+                  <div style={{ width: '100%', aspectRatio: '16/9', background: '#000', marginBottom: '1rem', border: '1px solid #333' }}>
+                    <iframe width="100%" height="100%" src={v.url} title={v.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+                  </div>
+                  <h4 style={{ margin: 0, fontFamily: "'Montserrat', sans-serif", fontSize: '1rem', fontWeight: 700 }}>{v.title}</h4>
                 </div>
               ))}
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
 
-      {/* ── Departments Grid ──────────────────────────────────── */}
-      <section className="page-section">
-        <div className="container">
-          <div className="section-header">
-            <div className="accent-line" />
-            <h2>Competing Departments</h2>
-            <p>8 departments battle for supremacy</p>
-          </div>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-            gap: 'var(--space-4)',
-          }}>
-            {DEPARTMENTS.map((dept, i) => (
-              <div
-                key={dept}
-                className={`card card-glow hover-lift animate-in stagger-${i + 1}`}
-                style={{
-                  textAlign: 'center',
-                  padding: 'var(--space-6) var(--space-4)',
-                }}
-              >
-                <div style={{
-                  fontSize: 'var(--text-2xl)',
-                  marginBottom: 'var(--space-2)',
-                }}>
-                  {['🤖', '🧬', '💻', '🏗️', '📡', '⚡', '⚙️', '⛏️'][i]}
-                </div>
-                <div style={{
-                  fontFamily: 'var(--font-heading)',
-                  fontWeight: 800,
-                  fontSize: 'var(--text-base)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  color: 'var(--text)',
-                }}>
-                  {dept}
-                </div>
+        {/* WIDGETS GRID: SCHEDULE & STANDINGS */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '3rem' }}>
+          
+          {/* SCHEDULE WIDGET */}
+          {widgets.showSchedule !== false && (
+            <section>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid #333', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+                <h2 style={{ margin: 0, fontFamily: "'Montserrat', sans-serif", fontSize: '1.5rem', fontWeight: 900, textTransform: 'uppercase' }}>MATCHES</h2>
+                <Link to="/schedule" style={{ color: 'var(--neon)', fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase' }}>Full Schedule ›</Link>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {liveTournaments.length > 0 ? liveTournaments.map(t => (
+                  <div key={t.id} style={{ background: '#1A1A1A', borderLeft: '4px solid var(--neon)', padding: '1.25rem', cursor: 'pointer' }} onClick={() => navigate(`/tournaments/${t.id}`)}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <span style={{ color: '#888', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase' }}>{new Date(t.start_date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric'})}</span>
+                      <span style={{ color: 'var(--neon)', fontSize: '0.75rem', fontWeight: 800, padding: '0.15rem 0.5rem', background: 'rgba(215,255,0,0.1)' }}>LIVE</span>
+                    </div>
+                    <h4 style={{ margin: 0, fontFamily: "'Montserrat', sans-serif", fontSize: '1.1rem', fontWeight: 800 }}>{t.name}</h4>
+                  </div>
+                )) : (
+                  <div style={{ background: '#1A1A1A', padding: '2rem', textAlign: 'center', color: '#666', fontSize: '0.9rem' }}>NO ONGOING TOURNAMENTS</div>
+                )}
+              </div>
+            </section>
+          )}
 
-      {/* ── CTA Section ───────────────────────────────────────── */}
-      <section style={{
-        padding: 'var(--space-16) 0',
-        background: 'linear-gradient(180deg, transparent, rgba(215,255,0,0.03), transparent)',
-        position: 'relative',
-      }}>
-        <div className="container" style={{ textAlign: 'center' }}>
-          <h2 style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: 'var(--text-3xl)',
-            fontWeight: 800,
-            textTransform: 'uppercase',
-            marginBottom: 'var(--space-4)',
-          }}>
-            Ready to <span style={{ color: 'var(--neon)' }}>Compete</span>?
-          </h2>
-          <p style={{
-            color: 'var(--text-secondary)',
-            fontSize: 'var(--text-lg)',
-            maxWidth: 480,
-            margin: '0 auto var(--space-8)',
-          }}>
-            Form your squad, register your team, and prove your department is the best.
-          </p>
-          <Link to="/register">
-            <Button variant="primary" size="lg">Register Now →</Button>
-          </Link>
+          {/* STANDINGS WIDGET */}
+          {widgets.showStandings !== false && (
+            <section>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid #333', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+                <h2 style={{ margin: 0, fontFamily: "'Montserrat', sans-serif", fontSize: '1.5rem', fontWeight: 900, textTransform: 'uppercase' }}>STANDINGS</h2>
+                <Link to="/leaderboard" style={{ color: 'var(--neon)', fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase' }}>Full Ranking ›</Link>
+              </div>
+              <div style={{ background: '#1A1A1A' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px 60px', padding: '1rem', borderBottom: '1px solid #333', color: '#888', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                  <div>RNK</div>
+                  <div>TEAM</div>
+                  <div style={{ textAlign: 'center' }}>KILLS</div>
+                  <div style={{ textAlign: 'right' }}>PTS</div>
+                </div>
+                {topTeams.length > 0 ? topTeams.map((team, idx) => (
+                  <div key={team.id} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 60px 60px', padding: '1rem', borderBottom: '1px solid #222', alignItems: 'center', transition: 'background 0.2s', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.background = '#222'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'} onClick={() => navigate(`/teams/${team.id}`)}>
+                    <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: '1.1rem', color: idx < 3 ? 'var(--neon)' : '#888' }}>{idx + 1}</div>
+                    <div style={{ fontWeight: 700 }}>{team.team_name}</div>
+                    <div style={{ textAlign: 'center', color: '#aaa', fontFamily: 'var(--font-mono)' }}>{team.total_kills}</div>
+                    <div style={{ textAlign: 'right', fontWeight: 800, color: 'var(--neon)' }}>{team.total_points}</div>
+                  </div>
+                )) : (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: '#666', fontSize: '0.9rem' }}>NO RANKINGS AVAILABLE</div>
+                )}
+              </div>
+            </section>
+          )}
+
         </div>
-      </section>
+      </div>
     </div>
   );
 }

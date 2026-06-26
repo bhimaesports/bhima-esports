@@ -49,35 +49,29 @@ router.get('/', (req, res) => {
 });
 
 // POST /api/tournaments - create tournament (admin)
-router.post('/', authenticate, upload.single('poster'), (req, res) => {
+router.post('/', authenticate, upload.fields([{ name: 'poster', maxCount: 1 }, { name: 'banner', maxCount: 1 }, { name: 'cover', maxCount: 1 }]), (req, res) => {
   try {
     const db = getDb();
-    const {
-      name, date, time, registration_deadline, team_slots,
-      status, rules, prize_details, mode,
-    } = req.body;
+    const { name, date, time, registration_deadline, team_slots, status, rules, mode, prize_pool, maps, match_format, prize_details } = req.body;
 
     if (!name) {
-      return res.status(400).json({ error: 'Tournament name is required.' });
+      return res.status(400).json({ error: 'Name is required.' });
     }
 
-    const poster_url = req.file ? `/uploads/${req.file.filename}` : null;
+    const poster_url = req.files?.poster ? `/uploads/${req.files.poster[0].filename}` : null;
+    const banner_url = req.files?.banner ? `/uploads/${req.files.banner[0].filename}` : null;
+    const cover_image = req.files?.cover ? `/uploads/${req.files.cover[0].filename}` : null;
 
     db.run(
-      `INSERT INTO tournaments (name, poster_url, date, time, registration_deadline,
-                                team_slots, status, rules, prize_details, mode)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tournaments (
+        name, poster_url, banner_url, cover_image, date, time, 
+        registration_deadline, team_slots, status, rules, mode, prize_pool, maps, match_format, prize_details
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        name,
-        poster_url,
-        date || null,
-        time || null,
-        registration_deadline || null,
-        team_slots ? Number(team_slots) : 20,
-        status || 'draft',
-        rules || null,
-        prize_details || null,
-        mode || 'br',
+        name, poster_url, banner_url, cover_image, date || null, time || null,
+        registration_deadline || null, team_slots ? Number(team_slots) : 20,
+        status || 'draft', rules || null, mode || 'br', prize_pool || null, maps || null, match_format || null, prize_details || null
       ]
     );
 
@@ -99,7 +93,7 @@ router.post('/', authenticate, upload.single('poster'), (req, res) => {
 });
 
 // PUT /api/tournaments/:id - update tournament (admin)
-router.put('/:id', authenticate, upload.single('poster'), (req, res) => {
+router.put('/:id', authenticate, upload.fields([{ name: 'poster', maxCount: 1 }, { name: 'banner', maxCount: 1 }, { name: 'cover', maxCount: 1 }]), (req, res) => {
   try {
     const db = getDb();
     const { id } = req.params;
@@ -109,29 +103,35 @@ router.put('/:id', authenticate, upload.single('poster'), (req, res) => {
       return res.status(404).json({ error: 'Tournament not found.' });
     }
 
-    const {
-      name, date, time, registration_deadline, team_slots,
-      rules, prize_details, mode,
-    } = req.body;
+    const { name, date, time, registration_deadline, team_slots, rules, mode, status, prize_pool, maps, match_format, prize_details } = req.body;
 
-    const poster_url = req.file ? `/uploads/${req.file.filename}` : tournament.poster_url;
+    const poster_url = req.files?.poster ? `/uploads/${req.files.poster[0].filename}` : tournament.poster_url;
+    const banner_url = req.files?.banner ? `/uploads/${req.files.banner[0].filename}` : tournament.banner_url;
+    const cover_image = req.files?.cover ? `/uploads/${req.files.cover[0].filename}` : tournament.cover_image;
 
     db.run(
       `UPDATE tournaments SET
-         name = ?, poster_url = ?, date = ?, time = ?, registration_deadline = ?,
-         team_slots = ?, rules = ?, prize_details = ?, mode = ?
+         name = ?, poster_url = ?, banner_url = ?, cover_image = ?, date = ?, time = ?,
+         registration_deadline = ?, team_slots = ?, rules = ?, mode = ?, status = ?,
+         prize_pool = ?, maps = ?, match_format = ?, prize_details = ?
        WHERE id = ?`,
       [
         name || tournament.name,
         poster_url,
-        date ?? tournament.date,
-        time ?? tournament.time,
-        registration_deadline ?? tournament.registration_deadline,
-        team_slots ? Number(team_slots) : tournament.team_slots,
-        rules ?? tournament.rules,
-        prize_details ?? tournament.prize_details,
+        banner_url,
+        cover_image,
+        date !== undefined ? date : tournament.date,
+        time !== undefined ? time : tournament.time,
+        registration_deadline !== undefined ? registration_deadline : tournament.registration_deadline,
+        team_slots !== undefined ? Number(team_slots) : tournament.team_slots,
+        rules !== undefined ? rules : tournament.rules,
         mode || tournament.mode,
-        Number(id),
+        status || tournament.status,
+        prize_pool !== undefined ? prize_pool : tournament.prize_pool,
+        maps !== undefined ? maps : tournament.maps,
+        match_format !== undefined ? match_format : tournament.match_format,
+        prize_details !== undefined ? prize_details : tournament.prize_details,
+        Number(id)
       ]
     );
 

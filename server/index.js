@@ -12,7 +12,9 @@ import { seedDatabase } from './db/seed.js';
 
 // Routes
 import authRoutes from './routes/auth.js';
+import playerAuthRoutes from './routes/playerAuth.js';
 import teamRoutes from './routes/teams.js';
+import departmentRoutes from './routes/departments.js';
 import playerRoutes from './routes/players.js';
 import tournamentRoutes from './routes/tournaments.js';
 import registrationRoutes from './routes/registrations.js';
@@ -20,12 +22,15 @@ import matchRoutes from './routes/matches.js';
 import leaderboardRoutes from './routes/leaderboards.js';
 import certificateRoutes from './routes/certificates.js';
 import announcementRoutes from './routes/announcements.js';
+import achievementsRoutes from './routes/achievements.js';
+import homepageRoutes from './routes/homepage.js';
 import settingsRoutes from './routes/settings.js';
 import pointsRoutes from './routes/points.js';
 import statsRoutes from './routes/stats.js';
 import sseRoutes from './routes/sse.js';
 import hallOfFameRoutes from './routes/hallOfFame.js';
 import backupRoutes from './routes/backups.js';
+import publicRoutes from './routes/public.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,6 +47,8 @@ app.use(helmet({
 app.use(cors({
   origin: [
     'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
     'http://localhost:3000',
     'http://localhost:3001',
     'https://bhima-esports.vercel.app'
@@ -56,20 +63,25 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ─── API Routes ──────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
+app.use('/api/player-auth', playerAuthRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/departments', departmentRoutes);
 app.use('/api/players', playerRoutes);
 app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/leaderboards', leaderboardRoutes);
 app.use('/api/certificates', certificateRoutes);
+app.use('/api/achievements', achievementsRoutes);
 app.use('/api/announcements', announcementRoutes);
+app.use('/api/homepage', homepageRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/points', pointsRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/events', sseRoutes);
 app.use('/api/hall-of-fame', hallOfFameRoutes);
 app.use('/api/backups', backupRoutes);
+app.use('/api/public', publicRoutes);
 
 // ─── Health Check ────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {

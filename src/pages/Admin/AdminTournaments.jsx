@@ -20,6 +20,9 @@ export default function AdminTournaments() {
     status: 'draft',
     rules: '',
     prize_details: '',
+    prize_pool: '',
+    maps: '',
+    match_format: '',
     mode: 'br',
   });
   const [selectedFile, setSelectedFile] = useState(null);
@@ -51,6 +54,9 @@ export default function AdminTournaments() {
       status: 'draft',
       rules: '',
       prize_details: '',
+      prize_pool: '',
+      maps: '',
+      match_format: '',
       mode: 'br',
     });
     setSelectedFile(null);
@@ -68,6 +74,9 @@ export default function AdminTournaments() {
       status: t.status || 'draft',
       rules: t.rules || '',
       prize_details: t.prize_details || '',
+      prize_pool: t.prize_pool || '',
+      maps: t.maps || '',
+      match_format: t.match_format || '',
       mode: t.mode || 'br',
     });
     setSelectedFile(null);
@@ -343,6 +352,42 @@ export default function AdminTournaments() {
                   className="form-input"
                   style={{ padding: '6px' }}
                 />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--space-3)' }}>
+                <div className="form-group">
+                  <label className="form-label">Prize Pool</label>
+                  <input
+                    type="text"
+                    name="prize_pool"
+                    className="form-input"
+                    placeholder="e.g. ₹10,000"
+                    value={formData.prize_pool}
+                    onChange={handleTextChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Maps</label>
+                  <input
+                    type="text"
+                    name="maps"
+                    className="form-input"
+                    placeholder="e.g. Bermuda, Purgatory"
+                    value={formData.maps}
+                    onChange={handleTextChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Match Format</label>
+                  <input
+                    type="text"
+                    name="match_format"
+                    className="form-input"
+                    placeholder="e.g. BO3"
+                    value={formData.match_format}
+                    onChange={handleTextChange}
+                  />
+                </div>
               </div>
 
               <div className="form-group">

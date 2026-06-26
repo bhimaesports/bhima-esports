@@ -66,12 +66,12 @@ router.get('/', (req, res) => {
 });
 
 // POST /api/teams - create team (admin)
-router.post('/', authenticate, upload.single('logo'), (req, res) => {
+router.post('/', authenticate, upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), (req, res) => {
   try {
     const db = getDb();
     const {
       name, department_id, year, captain_name, captain_roll,
-      captain_phone, leader_uid, leader_ign, motto,
+      captain_phone, leader_uid, leader_ign, motto, coach_name
     } = req.body;
 
     if (!name || !department_id) {
@@ -92,18 +92,20 @@ router.post('/', authenticate, upload.single('logo'), (req, res) => {
     const seq = String((teamCount?.count || 0) + 1).padStart(4, '0');
     const team_id = `BE-${dept.code}-${seq}`;
 
-    const logo_url = req.file ? `/uploads/${req.file.filename}` : null;
+    const logo_url = req.files?.logo ? `/uploads/${req.files.logo[0].filename}` : null;
+    const banner_url = req.files?.banner ? `/uploads/${req.files.banner[0].filename}` : null;
 
     db.run(
       `INSERT INTO teams (team_id, name, department_id, year, captain_name, captain_roll,
-                          captain_phone, leader_uid, leader_ign, logo_url, motto)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                          captain_phone, leader_uid, leader_ign, logo_url, banner_url, motto, coach_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [team_id, name, Number(department_id), year ? Number(year) : null,
        captain_name || null, captain_roll || null, captain_phone || null,
-       leader_uid || null, leader_ign || null, logo_url, motto || null]
+       leader_uid || null, leader_ign || null, logo_url, banner_url, motto || null, coach_name || null]
     );
 
     const id = db.getLastInsertRowId();
+    db.run('INSERT OR IGNORE INTO team_leaderboard (team_id) VALUES (?)', [id]);
     const team = db.get('SELECT * FROM teams WHERE id = ?', [id]);
 
     broadcastEvent('entity_update', { entity: 'teams' });
@@ -116,7 +118,7 @@ router.post('/', authenticate, upload.single('logo'), (req, res) => {
 });
 
 // PUT /api/teams/:id - update team (admin)
-router.put('/:id', authenticate, upload.single('logo'), (req, res) => {
+router.put('/:id', authenticate, upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), (req, res) => {
   try {
     const db = getDb();
     const { id } = req.params;
@@ -127,15 +129,16 @@ router.put('/:id', authenticate, upload.single('logo'), (req, res) => {
 
     const {
       name, department_id, year, captain_name, captain_roll,
-      captain_phone, leader_uid, leader_ign, motto,
+      captain_phone, leader_uid, leader_ign, motto, coach_name
     } = req.body;
 
-    const logo_url = req.file ? `/uploads/${req.file.filename}` : team.logo_url;
+    const logo_url = req.files?.logo ? `/uploads/${req.files.logo[0].filename}` : team.logo_url;
+    const banner_url = req.files?.banner ? `/uploads/${req.files.banner[0].filename}` : team.banner_url;
 
     db.run(
       `UPDATE teams SET
          name = ?, department_id = ?, year = ?, captain_name = ?, captain_roll = ?,
-         captain_phone = ?, leader_uid = ?, leader_ign = ?, logo_url = ?, motto = ?
+         captain_phone = ?, leader_uid = ?, leader_ign = ?, logo_url = ?, banner_url = ?, motto = ?, coach_name = ?
        WHERE id = ?`,
       [
         name || team.name,
@@ -147,7 +150,9 @@ router.put('/:id', authenticate, upload.single('logo'), (req, res) => {
         leader_uid ?? team.leader_uid,
         leader_ign ?? team.leader_ign,
         logo_url,
+        banner_url,
         motto ?? team.motto,
+        coach_name ?? team.coach_name,
         Number(id),
       ]
     );

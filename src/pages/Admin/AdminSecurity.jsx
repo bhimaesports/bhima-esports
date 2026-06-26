@@ -43,8 +43,11 @@ export default function AdminSecurity() {
     setSaving(true);
     setError('');
     try {
-      await api.post('/auth/change-credentials', formData);
-      alert('Credentials updated successfully. Please use your new credentials next time.');
+      const response = await api.post('/auth/change-credentials', formData);
+      if (response && response.token) {
+        localStorage.setItem('adminToken', response.token);
+      }
+      alert('Credentials updated successfully.');
       setFormData({
         new_admin_id: '',
         current_password: '',

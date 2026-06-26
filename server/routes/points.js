@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { getDb } from '../db/schema.js';
 import { authenticate } from '../middleware/auth.js';
+import { recalculateAllPoints } from '../utils/pointCalculator.js';
+import { broadcastEvent } from './sse.js';
 
 const router = Router();
 
@@ -66,9 +68,14 @@ router.put('/', authenticate, (req, res) => {
       [req.admin.admin_id, 'UPDATE_POINTS', 'Point distribution updated', req.ip]
     );
 
+    // Recalculate everything automatically!
+    recalculateAllPoints();
+    broadcastEvent('entity_update', { type: 'points' });
+    broadcastEvent('entity_update', { type: 'leaderboards' });
+
     const row = db.get('SELECT * FROM point_distributions ORDER BY id DESC LIMIT 1');
     res.json({
-      message: 'Point distribution updated.',
+      message: 'Point distribution updated. Leaderboards automatically recalculated.',
       point_distribution: {
         id: row.id,
         title: row.title,

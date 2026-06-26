@@ -3,6 +3,7 @@ import { getDb } from '../db/schema.js';
 import { authenticate } from '../middleware/auth.js';
 import { generateCertificateHTML } from '../utils/certificateGenerator.js';
 import { v4 as uuidv4 } from 'uuid';
+import { broadcastEvent } from './sse.js';
 
 const router = Router();
 
@@ -184,6 +185,25 @@ router.delete('/templates/:id', authenticate, (req, res) => {
 
 // ─── CERTIFICATES ENDPOINTS ───────────────────────────────────────────────────
 
+// GET /api/certificates/players - get players for dropdown
+router.get('/players', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const players = db.all(`
+      SELECT p.id, p.name, p.roll_number, d.name as department, t.name as team_name
+      FROM players p
+      LEFT JOIN departments d ON p.department_id = d.id
+      LEFT JOIN teams t ON p.team_id = t.id
+      WHERE p.status = 'active'
+      ORDER BY p.name ASC
+    `);
+    res.json({ players });
+  } catch (err) {
+    console.error('Get players error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
 // GET /api/certificates - search/filter certificates
 router.get('/', (req, res) => {
   try {
@@ -258,10 +278,11 @@ router.post('/', authenticate, (req, res) => {
   try {
     const db = getDb();
     const {
-      type, player_name, roll_number, team_name, department, tournament_name, tournament_date,
+      type, player_id, player_name, roll_number, team_name, department, tournament_name, tournament_date,
       title, description_text, signature_name, signature_designation, signature_name_2, signature_designation_2,
       signature_image, signature_image_2, colors, typography, logo_url, logo_size, logo_position,
-      seal_url, watermark_text, border_design, qr_code_enabled, sponsor_logos, position, award_type, template_id
+      seal_url, watermark_text, border_design, qr_code_enabled, sponsor_logos, position, award_type, template_id,
+      achievement_badge, achievement_level
     } = req.body;
 
     if (!type || !player_name) {
@@ -269,20 +290,21 @@ router.post('/', authenticate, (req, res) => {
     }
 
     // Generate unique cert_id
-    const shortUuid = uuidv4().split('-')[0].toUpperCase();
-    const cert_id = `BE-CERT-${shortUuid}`;
+    const uuid = require('crypto').randomUUID();
+    const shortUuid = uuid.split('-')[0].toUpperCase();
+    const cert_id = `BHIMA-CERT-${new Date().getFullYear()}-${shortUuid}`;
     const issued_date = new Date().toISOString().split('T')[0];
 
     db.run(`
       INSERT INTO certificates (
-        cert_id, type, player_name, roll_number, team_name, department, tournament_name, tournament_date,
+        cert_id, type, player_id, player_name, roll_number, team_name, department, tournament_name, tournament_date,
         issued_date, title, description_text, signature_name, signature_designation, signature_name_2,
         signature_designation_2, signature_image, signature_image_2, colors, typography, logo_url,
         logo_size, logo_position, seal_url, watermark_text, border_design, qr_code_enabled,
-        sponsor_logos, position, award_type, template_id, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+        sponsor_logos, position, award_type, template_id, achievement_badge, achievement_level, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
     `, [
-      cert_id, type, player_name, roll_number || null, team_name || null, department || null,
+      cert_id, type, player_id ? Number(player_id) : null, player_name, roll_number || null, team_name || null, department || null,
       tournament_name || null, tournament_date || null, issued_date,
       title || null, description_text || null, signature_name || null, signature_designation || null,
       signature_name_2 || null, signature_designation_2 || null, signature_image || null, signature_image_2 || null,
@@ -290,7 +312,7 @@ router.post('/', authenticate, (req, res) => {
       logo_size ? Number(logo_size) : 80, logo_position || 'top', seal_url || null, watermark_text || null,
       border_design || 'solid', qr_code_enabled !== undefined ? (qr_code_enabled ? 1 : 0) : 1,
       sponsor_logos ? JSON.stringify(sponsor_logos) : null, position || null, award_type || null,
-      template_id ? Number(template_id) : null
+      template_id ? Number(template_id) : null, achievement_badge || null, achievement_level || null
     ]);
 
     const id = db.getLastInsertRowId();
@@ -301,6 +323,7 @@ router.post('/', authenticate, (req, res) => {
       [req.admin.admin_id, 'GENERATE_CERT', `Issued ${cert_id} to ${player_name}`, req.ip]
     );
 
+    broadcastEvent('entity_update', { type: 'certificates' });
     res.status(201).json({ message: 'Certificate issued successfully.', certificate: cert });
   } catch (err) {
     console.error('Create certificate error:', err);
@@ -314,10 +337,11 @@ router.put('/:id', authenticate, (req, res) => {
     const db = getDb();
     const { id } = req.params;
     const {
-      cert_id, player_name, roll_number, team_name, department, tournament_name, tournament_date,
+      cert_id, player_id, player_name, roll_number, team_name, department, tournament_name, tournament_date,
       title, description_text, signature_name, signature_designation, signature_name_2, signature_designation_2,
       signature_image, signature_image_2, colors, typography, logo_url, logo_size, logo_position,
-      seal_url, watermark_text, border_design, qr_code_enabled, sponsor_logos, position, award_type, template_id, status
+      seal_url, watermark_text, border_design, qr_code_enabled, sponsor_logos, position, award_type, template_id, status,
+      achievement_badge, achievement_level
     } = req.body;
 
     const cert = db.get('SELECT * FROM certificates WHERE id = ?', [Number(id)]);
@@ -373,6 +397,7 @@ router.put('/:id', authenticate, (req, res) => {
       [req.admin.admin_id, 'EDIT_CERT', `Edited certificate ${cert.cert_id}`, req.ip]
     );
 
+    broadcastEvent('entity_update', { type: 'certificates' });
     res.json({ message: 'Certificate updated successfully.', certificate: updated });
   } catch (err) {
     console.error('Update certificate error:', err);

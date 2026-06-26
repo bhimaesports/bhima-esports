@@ -1,4 +1,5 @@
 import { classNames } from '../../utils/helpers';
+import { motion } from 'framer-motion';
 
 const VARIANTS = {
   primary: 'btn-primary',
@@ -22,12 +23,23 @@ export default function Button({
   loading = false,
   disabled = false,
   icon,
+  style = {},
   ...props
 }) {
   return (
-    <button
+    <motion.button
+      whileHover={!disabled && !loading ? { scale: 1.02, filter: 'brightness(1.1)' } : {}}
+      whileTap={!disabled && !loading ? { scale: 0.98 } : {}}
       className={classNames('btn', VARIANTS[variant], SIZES[size], className)}
       disabled={disabled || loading}
+      style={{
+        clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+        fontFamily: 'var(--font-heading)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        fontWeight: 700,
+        ...style,
+      }}
       {...props}
     >
       {loading ? (
@@ -36,6 +48,6 @@ export default function Button({
         <span className="btn-icon-left">{icon}</span>
       ) : null}
       {children}
-    </button>
+    </motion.button>
   );
 }

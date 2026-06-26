@@ -67,7 +67,15 @@ export function AppProvider({ children }) {
       };
       eventSource.addEventListener('hall-of-fame-update', triggerHallOfFameRefetch);
 
-      eventSource.addEventListener('entity_update', () => {
+      eventSource.addEventListener('entity_update', (e) => {
+        let entity = null;
+        try {
+          const data = JSON.parse(e.data);
+          entity = data.entity;
+        } catch {}
+        
+        window.dispatchEvent(new CustomEvent('entity_update', { detail: { entity } }));
+
         // Refetch stats silently when any entity changes
         api.get('/stats').then(data => {
           if (data) setStats(data);

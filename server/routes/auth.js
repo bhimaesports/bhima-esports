@@ -2,7 +2,8 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 import { getDb } from '../db/schema.js';
-import { authenticate, generateToken } from '../middleware/auth.js';
+import { authenticate, generateToken, JWT_SECRET } from '../middleware/auth.js';
+import jwt from 'jsonwebtoken';
 
 const router = Router();
 
@@ -146,14 +147,50 @@ router.get('/verify', authenticate, (req, res) => {
   }
 });
 
-// GET /api/auth/logs - get all admin action logs (admin)
+// GET /api/auth/logs (authenticated)
 router.get('/logs', authenticate, (req, res) => {
   try {
     const db = getDb();
     const logs = db.all('SELECT * FROM admin_logs ORDER BY timestamp DESC LIMIT 100');
     res.json({ logs });
   } catch (err) {
-    console.error('Get logs error:', err);
+    console.error('Fetch logs error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// POST /api/auth/refresh (handles expired tokens)
+router.post('/refresh', (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+    const token = authHeader.split(' ')[1];
+    
+    // Verify ignoring expiration to allow refreshing an expired token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET, { ignoreExpiration: true });
+    } catch (e) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    if (!decoded.admin_id) {
+      return res.status(401).json({ error: 'Not an admin token' });
+    }
+
+    const db = getDb();
+    const admin = db.get('SELECT * FROM admins WHERE admin_id = ?', [decoded.admin_id]);
+    
+    if (!admin) {
+      return res.status(401).json({ error: 'Admin no longer exists' });
+    }
+
+    const newToken = generateToken({ id: admin.id, admin_id: admin.admin_id });
+    res.json({ token: newToken });
+  } catch (err) {
+    console.error('Refresh token error:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }
 });

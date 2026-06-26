@@ -1,62 +1,43 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useApp } from '../../context/AppContext';
 import MobileNav from './MobileNav';
+import { motion } from 'framer-motion';
+import FlashNews from './FlashNews';
 
 const NAV_LINKS = [
   { path: '/', label: 'Home' },
   { path: '/tournaments', label: 'Tournaments' },
-  { path: '/register', label: 'Register' },
+  { path: '/schedule', label: 'Schedule' },
+  { path: '/teams', label: 'Teams' },
+  { path: '/players', label: 'Players' },
   { path: '/leaderboard', label: 'Leaderboard' },
-  { path: '/be-points', label: 'BE Points' },
   { path: '/hall-of-fame', label: 'Hall of Fame' },
-  { path: '/certificates', label: 'Certificates' },
 ];
 
-export default function Navbar() {
+export default function Navbar({ toggleTheme }) {
   const location = useLocation();
   const { isAdmin, openAdminLogin } = useAuth();
+  const { settings, announcements } = useApp();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [hoveredLink, setHoveredLink] = useState(null);
+  const navigate = useNavigate();
 
-  // Secret admin access - 10 clicks in 5s on logo
-  const clickTimestamps = useRef([]);
-  // Secret admin access - typing BHIMA in 3s
-  const keyBuffer = useRef([]);
+  const playerToken = localStorage.getItem('playerToken');
+
+  const handleLogout = () => {
+    localStorage.removeItem('playerToken');
+    navigate('/');
+  };
+
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  // Keyboard listener for BHIMA secret
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      const now = Date.now();
-      keyBuffer.current.push({ key: e.key.toUpperCase(), time: now });
-      // Keep only last 3 seconds
-      keyBuffer.current = keyBuffer.current.filter((k) => now - k.time < 3000);
-      const typed = keyBuffer.current.map((k) => k.key).join('');
-      if (typed.includes('BHIMA')) {
-        keyBuffer.current = [];
-        if (!isAdmin) openAdminLogin();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAdmin, openAdminLogin]);
-
-  const handleLogoClick = useCallback(() => {
-    const now = Date.now();
-    clickTimestamps.current.push(now);
-    // Keep only last 5 seconds
-    clickTimestamps.current = clickTimestamps.current.filter((t) => now - t < 5000);
-    if (clickTimestamps.current.length >= 10) {
-      clickTimestamps.current = [];
-      if (!isAdmin) openAdminLogin();
-    }
-  }, [isAdmin, openAdminLogin]);
 
   const isActive = (path) => {
     if (path === '/') return location.pathname === '/';
@@ -65,133 +46,206 @@ export default function Navbar() {
 
   return (
     <>
-      <nav
-        className={`glass-dark`}
+      <FlashNews />
+
+      <motion.nav
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+        className="glass-dark"
         style={{
-          position: 'fixed',
-          top: 0,
+          position: 'sticky',
+          top: '0px', 
           left: 0,
           right: 0,
-          height: 'var(--navbar-height)',
           zIndex: 'var(--z-sticky)',
-          borderBottom: scrolled ? '1px solid var(--border)' : '1px solid transparent',
-          transition: 'border-color 0.3s ease, background 0.3s ease',
+          borderBottom: '1px solid #000',
+          background: 'var(--neon)', /* Bright Yellow Navbar */
+          height: '60px', /* Fixed height to match side blocks */
+          transition: 'all 0.3s ease',
         }}
       >
-        <div className="container" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Logo */}
-          <Link to="/" onClick={handleLogoClick} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-            <img
-              src="/assets/logo.png"
-              alt="Bhima Esports"
-              style={{ height: 40, width: 40, objectFit: 'contain' }}
-            />
-            <span
-              style={{
-                fontFamily: 'var(--font-heading)',
-                fontWeight: 800,
-                fontSize: 'var(--text-lg)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}
-            >
-              <span style={{ color: 'var(--neon)' }}>BHIMA</span>{' '}
-              <span style={{ color: 'var(--text)' }}>ESPORTS</span>
-            </span>
-          </Link>
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Left: Logo Area */}
+          <div style={{ display: 'flex', height: '100%', background: '#000', padding: '0 2.5rem', flexShrink: 0 }}>
+            {/* PUBG Esports-style Black Box Logo */}
+            <Link to="/" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textDecoration: 'none' }}>
+              <img
+                src="/assets/logo.png"
+                alt="Bhima Esports"
+                style={{ height: 35, width: 35, objectFit: 'contain' }}
+              />
+              <span style={{ color: 'var(--neon)', fontSize: '0.65rem', fontFamily: 'var(--font-heading)', fontWeight: 900, marginTop: '4px', letterSpacing: '0.1em' }}>ESPORTS</span>
+            </Link>
+          </div>
 
-          {/* Desktop Nav */}
-          <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          {/* Center: Desktop Nav Links */}
+          <div 
+            className="hide-mobile" 
+            style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flex: 1, justifyContent: 'center' }}
+            onMouseLeave={() => setHoveredLink(null)}
+          >
             {NAV_LINKS.map((link) => {
               const active = isActive(link.path);
+              const isHovered = hoveredLink === link.path;
+              const showUnderline = hoveredLink ? isHovered : active;
+
               return (
                 <Link
                   key={link.path}
                   to={link.path}
+                  onMouseEnter={() => setHoveredLink(link.path)}
                   style={{
                     position: 'relative',
-                    padding: '0.5rem 0.875rem',
-                    fontFamily: 'var(--font-heading)',
-                    fontSize: 'var(--text-sm)',
-                    fontWeight: active ? 700 : 500,
+                    padding: '0.5rem 0',
+                    fontFamily: "'Orbitron', sans-serif",
+                    fontSize: '0.85rem',
+                    fontWeight: 900,
                     textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                    color: active ? 'var(--neon)' : 'var(--text)',
-                    transition: 'color 0.25s ease, font-weight 0.25s ease',
-                    textShadow: active ? '0 0 8px rgba(215,255,0,0.3)' : 'none',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!active) e.target.style.color = 'var(--neon)';
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!active) e.target.style.color = 'var(--text)';
+                    letterSpacing: '0.05em',
+                    color: '#000',
+                    textShadow: 'none',
+                    whiteSpace: 'nowrap',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  {link.label}
-                  {active && (
-                    <span
+                  {link.label} {['Tournaments', 'Schedule'].includes(link.label) && <span style={{ fontSize: '0.6rem' }}>▼</span>}
+                  
+                  {showUnderline && (
+                    <motion.div
+                      layoutId="nav-indicator"
+                      transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
                       style={{
                         position: 'absolute',
-                        bottom: 0,
-                        left: '0.875rem',
-                        right: '0.875rem',
-                        height: 2,
-                        background: 'var(--neon)',
-                        borderRadius: 'var(--radius-full)',
-                        animation: 'underlineSlide 0.3s ease forwards',
-                        transformOrigin: 'left',
-                        boxShadow: '0 0 6px rgba(215,255,0,0.4)',
+                        bottom: '-10px',
+                        left: 0,
+                        right: 0,
+                        height: '3px',
+                        background: '#000',
+                        borderRadius: '0px'
                       }}
                     />
                   )}
                 </Link>
               );
             })}
+          </div>
 
-            {isAdmin && (
-              <Link
-                to="/admin"
-                style={{
-                  marginLeft: '0.5rem',
-                  padding: '0.375rem 0.875rem',
-                  fontFamily: 'var(--font-heading)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  color: 'var(--bg-primary)',
-                  background: 'var(--neon)',
-                  borderRadius: 'var(--radius-md)',
-                }}
-              >
-                Admin
-              </Link>
+          {/* Right: Actions */}
+          <div className="hide-mobile" style={{ display: 'flex', height: '100%', alignItems: 'center', flexShrink: 0 }}>
+
+            {playerToken ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingRight: '1rem' }}>
+                <Link
+                  to="/dashboard"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontFamily: "'Rajdhani', sans-serif",
+                    fontSize: '0.95rem',
+                    fontWeight: 800,
+                    color: '#000',
+                    textDecoration: 'none'
+                  }}
+                >
+                  <span style={{ background: '#000', color: 'var(--neon)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 900 }}>👤</span>
+                  Dashboard
+                </Link>
+
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    background: 'transparent',
+                    color: '#ff3366',
+                    border: 'none',
+                    fontFamily: "'Rajdhani', sans-serif",
+                    fontSize: '0.95rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', paddingRight: '1.5rem' }}>
+                <Link
+                  to="/login"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontFamily: "'Rajdhani', sans-serif",
+                    fontSize: '0.95rem',
+                    fontWeight: 800,
+                    color: '#000',
+                    textDecoration: 'none'
+                  }}
+                >
+                  <span style={{ background: '#000', color: 'var(--neon)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 900, pointerEvents: 'none' }}>👤</span>
+                  Log-in
+                </Link>
+              </div>
             )}
+
+            {/* Black Block CTA Button */}
+            <Link
+              to="/tournament-register"
+              style={{
+                background: '#000',
+                color: '#FFF',
+                height: '100%',
+                padding: '0 2.5rem',
+                fontFamily: "'Orbitron', sans-serif",
+                fontSize: '1rem',
+                fontWeight: 900,
+                textTransform: 'uppercase',
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                letterSpacing: '1px'
+              }}
+            >
+              REGISTER NOW
+            </Link>
           </div>
 
           {/* Mobile Hamburger */}
           <button
-            className={`hamburger`}
+            className="hamburger"
             onClick={() => setMobileOpen(true)}
             style={{
               display: 'none',
               flexDirection: 'column',
               gap: 5,
               padding: 8,
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer'
             }}
             aria-label="Open menu"
           >
-            <span className="hamburger-line" style={{ width: 22, height: 2, background: 'var(--text)', borderRadius: 1, display: 'block' }} />
-            <span className="hamburger-line" style={{ width: 22, height: 2, background: 'var(--text)', borderRadius: 1, display: 'block' }} />
-            <span className="hamburger-line" style={{ width: 22, height: 2, background: 'var(--text)', borderRadius: 1, display: 'block' }} />
+            <span className="hamburger-line" style={{ width: 24, height: 2, background: 'var(--text)', borderRadius: 1, display: 'block', transition: 'all 0.3s ease' }} />
+            <span className="hamburger-line" style={{ width: 24, height: 2, background: 'var(--text)', borderRadius: 1, display: 'block', transition: 'all 0.3s ease' }} />
+            <span className="hamburger-line" style={{ width: 24, height: 2, background: 'var(--text)', borderRadius: 1, display: 'block', transition: 'all 0.3s ease' }} />
           </button>
         </div>
-      </nav>
+      </motion.nav>
 
       <MobileNav isOpen={mobileOpen} onClose={() => setMobileOpen(false)} links={NAV_LINKS} />
 
       <style>{`
-        @media (max-width: 768px) {
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-33.3333%); }
+        }
+        @media (max-width: 1100px) {
           .hide-mobile { display: none !important; }
           .hamburger { display: flex !important; }
         }

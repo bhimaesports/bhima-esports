@@ -123,10 +123,90 @@ export function updateDeptLeaderboard() {
   }
 }
 
+export function recalculateAllPoints() {
+  const db = getDb();
+  const { killPointValue, placementPoints } = getPlacementPoints(1); // Rank 1 points for wins/booyahs
+
+  // 1. Recalculate all players
+  const players = db.all('SELECT * FROM players');
+  for (const player of players) {
+    const kPoints = (player.kills || 0) * killPointValue;
+    // wins or booyahs count as rank 1
+    const wPoints = ((player.wins || 0) + (player.booyahs || 0)) * placementPoints; 
+    const mvpPoints = (player.mvp_awards || 0) * 5; // Example arbitrary 5 pts for MVP if no schema exists for it
+    const totalPoints = kPoints + wPoints + mvpPoints;
+
+    db.run(
+      'UPDATE players SET total_points = ? WHERE id = ?',
+      [totalPoints, player.id]
+    );
+
+    // Also update player_leaderboard if entries exist
+    db.run(
+      'UPDATE player_leaderboard SET total_points = ?, kills = ?, wins = ?, matches = ? WHERE player_id = ?',
+      [totalPoints, player.kills, player.wins, player.matches_played, player.id]
+    );
+  }
+
+  // 2. Recalculate Teams based on sum of players
+  const teams = db.all('SELECT id FROM teams');
+  for (const team of teams) {
+    const sum = db.get('SELECT SUM(total_points) as tp, SUM(kills) as tk, SUM(wins) as tw, SUM(matches_played) as tm FROM players WHERE team_id = ? AND status="active"', [team.id]);
+    
+    // Update team leaderboard
+    const existingTl = db.get('SELECT id FROM team_leaderboard WHERE team_id = ?', [team.id]);
+    if (existingTl) {
+      db.run(
+        'UPDATE team_leaderboard SET total_points = ?, total_kills = ?, wins = ?, matches = ? WHERE team_id = ?',
+        [sum.tp || 0, sum.tk || 0, sum.tw || 0, sum.tm || 0, team.id]
+      );
+    } else {
+      db.run(
+        'INSERT INTO team_leaderboard (team_id, total_points, total_kills, wins, matches) VALUES (?, ?, ?, ?, ?)',
+        [team.id, sum.tp || 0, sum.tk || 0, sum.tw || 0, sum.tm || 0]
+      );
+    }
+  }
+
+  // 3. Recalculate Departments based on sum of teams
+  const depts = db.all('SELECT id FROM departments');
+  for (const dept of depts) {
+    const sum = db.get(
+      `SELECT SUM(tl.total_points) as tp, SUM(tl.wins) as tw, COUNT(DISTINCT t.id) as tc 
+       FROM team_leaderboard tl 
+       JOIN teams t ON tl.team_id = t.id 
+       WHERE t.department_id = ? AND t.status="active"`, 
+       [dept.id]
+    );
+
+    const existingDl = db.get('SELECT id FROM dept_leaderboard WHERE department_id = ?', [dept.id]);
+    if (existingDl) {
+      db.run(
+        'UPDATE dept_leaderboard SET total_points = ?, wins = ?, teams_participated = ? WHERE department_id = ?',
+        [sum.tp || 0, sum.tw || 0, sum.tc || 0, dept.id]
+      );
+    } else {
+      db.run(
+        'INSERT INTO dept_leaderboard (department_id, total_points, wins, teams_participated) VALUES (?, ?, ?, ?)',
+        [dept.id, sum.tp || 0, sum.tw || 0, sum.tc || 0]
+      );
+    }
+  }
+
+  // 4. Update Rankings
+  recalculateTeamRanks();
+  
+  const deptRanks = db.all('SELECT id FROM dept_leaderboard ORDER BY total_points DESC');
+  for (let i = 0; i < deptRanks.length; i++) {
+    db.run('UPDATE dept_leaderboard SET current_rank = ? WHERE id = ?', [i + 1, deptRanks[i].id]);
+  }
+}
+
 export default {
   getPlacementPoints,
   calculatePoints,
   updateTeamLeaderboard,
   recalculateTeamRanks,
   updateDeptLeaderboard,
+  recalculateAllPoints,
 };

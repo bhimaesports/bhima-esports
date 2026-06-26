@@ -145,6 +145,9 @@ router.post('/', upload.single('logo'), (req, res) => {
       );
       const teamDbId = db.getLastInsertRowId();
 
+      // Add to team_leaderboard
+      db.run('INSERT OR IGNORE INTO team_leaderboard (team_id) VALUES (?)', [teamDbId]);
+
       // Create players
       for (const p of parsedPlayers) {
         db.run(

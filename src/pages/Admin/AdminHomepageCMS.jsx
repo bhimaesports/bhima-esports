@@ -1,212 +1,650 @@
 import { useState, useEffect } from 'react';
 import api from '../../utils/api';
-import { useApp } from '../../context/AppContext';
 import Button from '../../components/UI/Button';
+import Card from '../../components/UI/Card';
+import Modal from '../../components/UI/Modal';
+import Table from '../../components/UI/Table';
+import Badge from '../../components/UI/Badge';
 
-export default function AdminHomepageCMS() {
-  const { settings, refetchAll } = useApp();
+function SettingsTab() {
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   
-  const defaultHomepageConfig = {
-    hero: {
-      tagline: 'Inter-Department Esports Championship',
-      title1: 'DOMINATE THE',
-      title2: 'BATTLEFIELD',
-      subtitle: '8 departments. 1 champion. Compete in FreeFire, Bgmi & Cod for glory, BE Points, and eternal bragging rights.',
-      video_url: 'https://res.cloudinary.com/dns0nlupj/video/upload/can_you_make_this_logo_as_an_g_bi3zdj.mp4#t=0,3'
-    },
-    stats: [
-      { id: '1', source: 'teams.total', label: 'Teams', visible: true },
-      { id: '2', source: 'players.total', label: 'Players', visible: true },
-      { id: '3', source: 'tournaments.total', label: 'Tournaments', visible: true },
-      { id: '4', source: 'departments', label: 'Departments', visible: true }
-    ],
-    visibility: {
-      announcements: true,
-      departments: true,
-      cta: true
-    },
-    social: {
-      instagram: ''
-    }
-  };
+  const [formData, setFormData] = useState({
+    hero_title: '',
+    hero_subtitle: '',
+    stats_visible: 1,
+    about_title: '',
+    about_text: '',
+    ticker_text: ''
+  });
+  
+  const [files, setFiles] = useState({
+    hero_video: null,
+    hero_banner: null,
+    about_image: null
+  });
 
-  const [config, setConfig] = useState(defaultHomepageConfig);
+  const [currentFiles, setCurrentFiles] = useState({});
 
   useEffect(() => {
-    if (settings?.homepage_config) {
-      try {
-        const parsed = JSON.parse(settings.homepage_config);
-        // Merge with default to ensure all fields exist
-        setConfig({
-          hero: { ...defaultHomepageConfig.hero, ...(parsed.hero || {}) },
-          stats: parsed.stats || defaultHomepageConfig.stats,
-          visibility: { ...defaultHomepageConfig.visibility, ...(parsed.visibility || {}) },
-          social: { ...defaultHomepageConfig.social, ...(parsed.social || {}) },
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    setLoading(true);
+    try {
+      const data = await api.get('/homepage/settings');
+      if (data) {
+        setFormData({
+          hero_title: data.hero_title || '',
+          hero_subtitle: data.hero_subtitle || '',
+          stats_visible: data.stats_visible ?? 1,
+          about_title: data.about_title || '',
+          about_text: data.about_text || '',
+          ticker_text: data.ticker_text || ''
         });
-      } catch (e) {
-        console.error('Error parsing homepage_config', e);
+        setCurrentFiles({
+          hero_video_url: data.hero_video_url,
+          hero_banner_url: data.hero_banner_url,
+          about_image_url: data.about_image_url
+        });
       }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to load settings');
+    } finally {
+      setLoading(false);
     }
-  }, [settings]);
-
-  const handleHeroChange = (e) => {
-    const { name, value } = e.target;
-    setConfig(prev => ({
-      ...prev,
-      hero: { ...prev.hero, [name]: value }
-    }));
   };
 
-  const handleSocialChange = (e) => {
-    const { name, value } = e.target;
-    setConfig(prev => ({
-      ...prev,
-      social: { ...prev.social, [name]: value }
-    }));
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    if (type === 'checkbox') {
+      setFormData(prev => ({ ...prev, [name]: checked ? 1 : 0 }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
-  const handleStatChange = (id, field, value) => {
-    setConfig(prev => ({
-      ...prev,
-      stats: prev.stats.map(s => s.id === id ? { ...s, [field]: value } : s)
-    }));
+  const handleFileChange = (e) => {
+    const { name, files: fileList } = e.target;
+    if (fileList && fileList.length > 0) {
+      setFiles(prev => ({ ...prev, [name]: fileList[0] }));
+    }
   };
 
   const handleSave = async () => {
+    setSaving(true);
     try {
-      setSaving(true);
-      await api.put('/settings', {
-        settings: { homepage_config: JSON.stringify(config) }
+      const fd = new FormData();
+      Object.keys(formData).forEach(k => {
+        fd.append(k, formData[k]);
       });
-      alert('Homepage config saved successfully! It is now live.');
-      refetchAll();
+      Object.keys(files).forEach(k => {
+        if (files[k]) {
+          fd.append(k, files[k]);
+        }
+      });
+      await api.put('/homepage/settings', fd);
+      alert('Homepage settings saved successfully!');
+      fetchSettings();
+      setFiles({ hero_video: null, hero_banner: null, about_image: null });
     } catch (err) {
+      console.error(err);
       alert(err.message || 'Failed to save settings.');
     } finally {
       setSaving(false);
     }
   };
 
-  const statSources = [
-    { value: 'teams.total', label: 'Total Teams' },
-    { value: 'teams.active', label: 'Active Teams' },
-    { value: 'players.total', label: 'Total Players' },
-    { value: 'players.active', label: 'Active Players' },
-    { value: 'tournaments.total', label: 'Total Tournaments' },
-    { value: 'tournaments.live', label: 'Live Tournaments' },
-    { value: 'tournaments.completed', label: 'Completed Tournaments' },
-    { value: 'matches.total', label: 'Total Matches' },
-    { value: 'registrations.total', label: 'Total Registrations' },
-    { value: 'certificates', label: 'Total Certificates' },
-    { value: 'departments', label: 'Departments Count' },
+  if (loading) return <div style={{ textAlign: 'center', padding: '2rem' }}>Loading...</div>;
+
+  return (
+    <div style={{ display: 'grid', gap: 'var(--space-6)' }}>
+      <Card>
+        <h3 style={{ marginBottom: 'var(--space-4)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Hero Section</h3>
+        <div className="form-group">
+          <label>Hero Title</label>
+          <input className="form-control" name="hero_title" value={formData.hero_title} onChange={handleChange} />
+        </div>
+        <div className="form-group">
+          <label>Hero Subtitle</label>
+          <input className="form-control" name="hero_subtitle" value={formData.hero_subtitle} onChange={handleChange} />
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div className="form-group">
+            <label>Hero Banner (Image)</label>
+            <input type="file" className="form-control" name="hero_banner" onChange={handleFileChange} accept="image/*" />
+            {currentFiles.hero_banner_url && !files.hero_banner && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <a href={currentFiles.hero_banner_url} target="_blank" rel="noreferrer" style={{ color: 'var(--neon)' }}>View Current Banner</a>
+              </div>
+            )}
+            <small style={{ color: 'var(--text-muted)' }}>Leave blank to keep current.</small>
+          </div>
+          <div className="form-group">
+            <label>Hero Video</label>
+            <input type="file" className="form-control" name="hero_video" onChange={handleFileChange} accept="video/*" />
+            {currentFiles.hero_video_url && !files.hero_video && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <a href={currentFiles.hero_video_url} target="_blank" rel="noreferrer" style={{ color: 'var(--neon)' }}>View Current Video</a>
+              </div>
+            )}
+            <small style={{ color: 'var(--text-muted)' }}>Background looping video (optional).</small>
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <h3 style={{ marginBottom: 'var(--space-4)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Match Ticker & Stats</h3>
+        <div className="form-group">
+          <label>Ticker Text</label>
+          <input className="form-control" name="ticker_text" value={formData.ticker_text} onChange={handleChange} placeholder="Scrolling text on homepage..." />
+        </div>
+        <div className="form-group">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input type="checkbox" name="stats_visible" checked={formData.stats_visible === 1} onChange={handleChange} />
+            Show Statistics Section on Homepage
+          </label>
+        </div>
+      </Card>
+
+      <Card>
+        <h3 style={{ marginBottom: 'var(--space-4)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>About Section</h3>
+        <div className="form-group">
+          <label>About Title</label>
+          <input className="form-control" name="about_title" value={formData.about_title} onChange={handleChange} />
+        </div>
+        <div className="form-group">
+          <label>About Text</label>
+          <textarea className="form-control" name="about_text" value={formData.about_text} onChange={handleChange} rows={5} />
+        </div>
+        <div className="form-group">
+          <label>About Image</label>
+          <input type="file" className="form-control" name="about_image" onChange={handleFileChange} accept="image/*" />
+          {currentFiles.about_image_url && !files.about_image && (
+            <div style={{ marginTop: '0.5rem' }}>
+              <img src={currentFiles.about_image_url} alt="About" style={{ width: '200px', borderRadius: '8px' }} />
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <div>
+        <Button variant="primary" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : 'Save Settings'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SponsorsTab() {
+  const [sponsors, setSponsors] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+
+  const [formData, setFormData] = useState({ name: '', link: '', display_order: 0, is_active: 1 });
+  const [logoFile, setLogoFile] = useState(null);
+
+  useEffect(() => {
+    fetchSponsors();
+  }, []);
+
+  const fetchSponsors = async () => {
+    setLoading(true);
+    try {
+      const data = await api.get('/homepage/sponsors', { all: 1 });
+      setSponsors(data.sponsors || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenModal = (sponsor = null) => {
+    setEditingItem(sponsor);
+    if (sponsor) {
+      setFormData({
+        name: sponsor.name,
+        link: sponsor.link || '',
+        display_order: sponsor.display_order || 0,
+        is_active: sponsor.is_active ? 1 : 0
+      });
+    } else {
+      setFormData({ name: '', link: '', display_order: 0, is_active: 1 });
+    }
+    setLogoFile(null);
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setEditingItem(null);
+  };
+
+  const handleSave = async () => {
+    if (!formData.name) return alert('Name is required');
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append('name', formData.name);
+      fd.append('link', formData.link);
+      fd.append('display_order', formData.display_order);
+      fd.append('is_active', formData.is_active);
+      if (logoFile) fd.append('logo', logoFile);
+
+      if (editingItem) {
+        await api.put(`/homepage/sponsors/${editingItem.id}`, fd);
+      } else {
+        await api.post(`/homepage/sponsors`, fd);
+      }
+      handleCloseModal();
+      fetchSponsors();
+    } catch (err) {
+      alert(err.message || 'Failed to save sponsor');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this sponsor?')) return;
+    try {
+      await api.delete(`/homepage/sponsors/${id}`);
+      fetchSponsors();
+    } catch (err) {
+      alert(err.message || 'Failed to delete');
+    }
+  };
+
+  const columns = [
+    {
+      key: 'logo_url',
+      label: 'Logo',
+      sortable: false,
+      render: (val) => val ? <img src={val} alt="logo" style={{ height: '40px', objectFit: 'contain' }} /> : '-'
+    },
+    { key: 'name', label: 'Name' },
+    { key: 'link', label: 'Link', render: (val) => val ? <a href={val} target="_blank" rel="noreferrer" style={{ color: 'var(--neon)' }}>Link</a> : '-' },
+    { key: 'display_order', label: 'Order' },
+    { key: 'is_active', label: 'Status', render: (val) => val ? <Badge variant="success">Active</Badge> : <Badge variant="default">Hidden</Badge> },
+    {
+      key: 'actions',
+      label: 'Actions',
+      sortable: false,
+      render: (_, row) => (
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Button size="sm" onClick={() => handleOpenModal(row)}>Edit</Button>
+          <Button size="sm" variant="danger" onClick={() => handleDelete(row.id)}>Delete</Button>
+        </div>
+      )
+    }
   ];
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
-        <h2>Homepage CMS</h2>
-        <Button onClick={handleSave} disabled={saving} variant="primary">
-          {saving ? 'Saving...' : 'Save Changes'}
-        </Button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <h3>Sponsors List</h3>
+        <Button onClick={() => handleOpenModal()} variant="primary">+ Add Sponsor</Button>
       </div>
 
-      <div style={{ display: 'grid', gap: 'var(--space-6)' }}>
-        {/* HERO SECTION */}
-        <div className="card">
-          <h3 style={{ marginBottom: 'var(--space-4)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-            Hero Section
-          </h3>
-          <div className="form-group">
-            <label>Tagline</label>
-            <input className="form-control" name="tagline" value={config.hero.tagline} onChange={handleHeroChange} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-            <div className="form-group">
-              <label>Title Line 1</label>
-              <input className="form-control" name="title1" value={config.hero.title1} onChange={handleHeroChange} />
-            </div>
-            <div className="form-group">
-              <label>Title Line 2 (Gradient)</label>
-              <input className="form-control" name="title2" value={config.hero.title2} onChange={handleHeroChange} />
-            </div>
-          </div>
-          <div className="form-group">
-            <label>Subtitle / Description</label>
-            <textarea className="form-control" rows={3} name="subtitle" value={config.hero.subtitle} onChange={handleHeroChange} />
-          </div>
-          <div className="form-group">
-            <label>Background Video URL</label>
-            <input className="form-control" name="video_url" value={config.hero.video_url} onChange={handleHeroChange} />
-            <small style={{ color: 'var(--text-muted)' }}>Must be a direct link to an mp4 file.</small>
-          </div>
+      <Card>
+        {loading ? <div style={{ textAlign: 'center' }}>Loading...</div> : (
+          <Table columns={columns} data={sponsors} />
+        )}
+      </Card>
+
+      <Modal isOpen={modalOpen} onClose={handleCloseModal} title={editingItem ? 'Edit Sponsor' : 'Add Sponsor'}>
+        <div className="form-group">
+          <label>Name *</label>
+          <input className="form-control" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label>Link URL</label>
+          <input className="form-control" value={formData.link} onChange={e => setFormData({ ...formData, link: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label>Display Order</label>
+          <input type="number" className="form-control" value={formData.display_order} onChange={e => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })} />
+        </div>
+        <div className="form-group">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input type="checkbox" checked={formData.is_active === 1} onChange={e => setFormData({ ...formData, is_active: e.target.checked ? 1 : 0 })} />
+            Is Active
+          </label>
+        </div>
+        <div className="form-group">
+          <label>Logo Image {editingItem && !logoFile && '(Leave blank to keep current)'}</label>
+          <input type="file" className="form-control" onChange={e => setLogoFile(e.target.files[0])} accept="image/*" />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+          <Button variant="outline" onClick={handleCloseModal}>Cancel</Button>
+          <Button variant="primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+function PartnersTab() {
+  const [partners, setPartners] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+
+  const [formData, setFormData] = useState({ name: '', link: '', type: '', display_order: 0, is_active: 1 });
+  const [logoFile, setLogoFile] = useState(null);
+
+  useEffect(() => {
+    fetchPartners();
+  }, []);
+
+  const fetchPartners = async () => {
+    setLoading(true);
+    try {
+      const data = await api.get('/homepage/partners', { all: 1 });
+      setPartners(data.partners || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenModal = (partner = null) => {
+    setEditingItem(partner);
+    if (partner) {
+      setFormData({
+        name: partner.name,
+        link: partner.link || '',
+        type: partner.type || '',
+        display_order: partner.display_order || 0,
+        is_active: partner.is_active ? 1 : 0
+      });
+    } else {
+      setFormData({ name: '', link: '', type: '', display_order: 0, is_active: 1 });
+    }
+    setLogoFile(null);
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setEditingItem(null);
+  };
+
+  const handleSave = async () => {
+    if (!formData.name) return alert('Name is required');
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append('name', formData.name);
+      fd.append('link', formData.link);
+      fd.append('type', formData.type);
+      fd.append('display_order', formData.display_order);
+      fd.append('is_active', formData.is_active);
+      if (logoFile) fd.append('logo', logoFile);
+
+      if (editingItem) {
+        await api.put(`/homepage/partners/${editingItem.id}`, fd);
+      } else {
+        await api.post(`/homepage/partners`, fd);
+      }
+      handleCloseModal();
+      fetchPartners();
+    } catch (err) {
+      alert(err.message || 'Failed to save partner');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this partner?')) return;
+    try {
+      await api.delete(`/homepage/partners/${id}`);
+      fetchPartners();
+    } catch (err) {
+      alert(err.message || 'Failed to delete');
+    }
+  };
+
+  const columns = [
+    {
+      key: 'logo_url',
+      label: 'Logo',
+      sortable: false,
+      render: (val) => val ? <img src={val} alt="logo" style={{ height: '40px', objectFit: 'contain' }} /> : '-'
+    },
+    { key: 'name', label: 'Name' },
+    { key: 'type', label: 'Type' },
+    { key: 'link', label: 'Link', render: (val) => val ? <a href={val} target="_blank" rel="noreferrer" style={{ color: 'var(--neon)' }}>Link</a> : '-' },
+    { key: 'display_order', label: 'Order' },
+    { key: 'is_active', label: 'Status', render: (val) => val ? <Badge variant="success">Active</Badge> : <Badge variant="default">Hidden</Badge> },
+    {
+      key: 'actions',
+      label: 'Actions',
+      sortable: false,
+      render: (_, row) => (
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Button size="sm" onClick={() => handleOpenModal(row)}>Edit</Button>
+          <Button size="sm" variant="danger" onClick={() => handleDelete(row.id)}>Delete</Button>
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <h3>Partners List</h3>
+        <Button onClick={() => handleOpenModal()} variant="primary">+ Add Partner</Button>
+      </div>
+
+      <Card>
+        {loading ? <div style={{ textAlign: 'center' }}>Loading...</div> : (
+          <Table columns={columns} data={partners} />
+        )}
+      </Card>
+
+      <Modal isOpen={modalOpen} onClose={handleCloseModal} title={editingItem ? 'Edit Partner' : 'Add Partner'}>
+        <div className="form-group">
+          <label>Name *</label>
+          <input className="form-control" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label>Type (e.g., Broadcasting, Venue)</label>
+          <input className="form-control" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label>Link URL</label>
+          <input className="form-control" value={formData.link} onChange={e => setFormData({ ...formData, link: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label>Display Order</label>
+          <input type="number" className="form-control" value={formData.display_order} onChange={e => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })} />
+        </div>
+        <div className="form-group">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input type="checkbox" checked={formData.is_active === 1} onChange={e => setFormData({ ...formData, is_active: e.target.checked ? 1 : 0 })} />
+            Is Active
+          </label>
+        </div>
+        <div className="form-group">
+          <label>Logo Image {editingItem && !logoFile && '(Leave blank to keep current)'}</label>
+          <input type="file" className="form-control" onChange={e => setLogoFile(e.target.files[0])} accept="image/*" />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+          <Button variant="outline" onClick={handleCloseModal}>Cancel</Button>
+          <Button variant="primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+function FlashNewsTab() {
+  const [news, setNews] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+
+  const [formData, setFormData] = useState({ text: '', is_active: 1, is_pinned: 0, scheduled_for: '' });
+
+  useEffect(() => {
+    fetchNews();
+  }, []);
+
+  const fetchNews = async () => {
+    setLoading(true);
+    try {
+      const data = await api.get('/homepage/flash-news', { all: 1 });
+      setNews(data.flashNews || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenModal = (item = null) => {
+    setEditingItem(item);
+    if (item) {
+      setFormData({
+        text: item.text,
+        is_active: item.is_active ? 1 : 0,
+        is_pinned: item.is_pinned ? 1 : 0,
+        scheduled_for: item.scheduled_for || ''
+      });
+    } else {
+      setFormData({ text: '', is_active: 1, is_pinned: 0, scheduled_for: '' });
+    }
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setEditingItem(null);
+  };
+
+  const handleSave = async () => {
+    if (!formData.text) return alert('Text is required');
+    setSaving(true);
+    try {
+      if (editingItem) {
+        await api.put(`/homepage/flash-news/${editingItem.id}`, formData);
+      } else {
+        await api.post(`/homepage/flash-news`, formData);
+      }
+      handleCloseModal();
+      fetchNews();
+    } catch (err) {
+      alert(err.message || 'Failed to save flash news');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this flash news?')) return;
+    try {
+      await api.delete(`/homepage/flash-news/${id}`);
+      fetchNews();
+    } catch (err) {
+      alert(err.message || 'Failed to delete flash news');
+    }
+  };
+
+  const columns = [
+    { header: 'Text', accessor: 'text' },
+    { header: 'Pinned', accessor: (row) => row.is_pinned ? <Badge variant="warning">Yes</Badge> : 'No' },
+    { header: 'Active', accessor: (row) => row.is_active ? <Badge variant="success">Yes</Badge> : <Badge variant="error">No</Badge> },
+    { header: 'Scheduled', accessor: (row) => row.scheduled_for ? new Date(row.scheduled_for).toLocaleString() : 'Immediate' },
+    {
+      header: 'Actions',
+      accessor: (row) => (
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Button size="sm" variant="outline" onClick={() => handleOpenModal(row)}>Edit</Button>
+          <Button size="sm" variant="outline" style={{ borderColor: 'var(--error)', color: 'var(--error)' }} onClick={() => handleDelete(row.id)}>Delete</Button>
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div style={{ display: 'grid', gap: 'var(--space-6)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ margin: 0 }}>Flash News Ticker</h3>
+        <Button variant="primary" onClick={() => handleOpenModal()}>+ Add News</Button>
+      </div>
+
+      <Card>
+        {loading ? <div style={{ textAlign: 'center' }}>Loading...</div> : (
+          <Table columns={columns} data={news} />
+        )}
+      </Card>
+
+      <Modal isOpen={modalOpen} onClose={handleCloseModal} title={editingItem ? 'Edit Flash News' : 'Add Flash News'}>
+        <div className="form-group">
+          <label>News Text *</label>
+          <input className="form-control" value={formData.text} onChange={e => setFormData({ ...formData, text: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label>Schedule For (Optional)</label>
+          <input type="datetime-local" className="form-control" value={formData.scheduled_for} onChange={e => setFormData({ ...formData, scheduled_for: e.target.value })} />
+        </div>
+        <div className="form-group" style={{ display: 'flex', gap: '1rem' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input type="checkbox" checked={formData.is_active === 1} onChange={e => setFormData({ ...formData, is_active: e.target.checked ? 1 : 0 })} />
+            Is Active
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input type="checkbox" checked={formData.is_pinned === 1} onChange={e => setFormData({ ...formData, is_pinned: e.target.checked ? 1 : 0 })} />
+            Is Pinned
+          </label>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+          <Button variant="outline" onClick={handleCloseModal}>Cancel</Button>
+          <Button variant="primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+export default function AdminHomepageCMS() {
+  const [activeTab, setActiveTab] = useState('settings');
+
+  return (
+    <div className="page-wrapper animate-in">
+      <div className="container">
+        <div className="section-header">
+           <div className="accent-line"></div>
+           <h2>Homepage CMS</h2>
+           <p>Manage Homepage Settings, Sponsors, and Partners.</p>
         </div>
 
-        {/* STATISTICS SECTION */}
-        <div className="card">
-          <h3 style={{ marginBottom: 'var(--space-4)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-            Statistics Section
-          </h3>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
-            Select what data to display. The numbers will be fetched live from the database.
-          </p>
-          
-          <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
-            {config.stats.map((stat, idx) => (
-              <div key={stat.id} style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-end', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px' }}>
-                <div style={{ width: '40px', textAlign: 'center', fontWeight: 'bold' }}>#{idx + 1}</div>
-                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                  <label>Label</label>
-                  <input 
-                    className="form-control" 
-                    value={stat.label} 
-                    onChange={e => handleStatChange(stat.id, 'label', e.target.value)} 
-                  />
-                </div>
-                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                  <label>Data Source</label>
-                  <select 
-                    className="form-control" 
-                    value={stat.source}
-                    onChange={e => handleStatChange(stat.id, 'source', e.target.value)}
-                  >
-                    {statSources.map(src => (
-                      <option key={src.value} value={src.value}>{src.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group" style={{ marginBottom: 0, paddingBottom: '0.5rem' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={stat.visible}
-                      onChange={e => handleStatChange(stat.id, 'visible', e.target.checked)}
-                    />
-                    Visible
-                  </label>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        {/* SOCIAL LINKS SECTION */}
-        <div className="card">
-          <h3 style={{ marginBottom: 'var(--space-4)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-            Social Links
-          </h3>
-          <div className="form-group">
-            <label>Instagram URL</label>
-            <input 
-              className="form-control" 
-              name="instagram" 
-              placeholder="https://instagram.com/bhimaesports"
-              value={config.social?.instagram || ''} 
-              onChange={handleSocialChange} 
-            />
-            <small style={{ color: 'var(--text-muted)' }}>Enter your full Instagram profile link. It will appear in the footer.</small>
-          </div>
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', flexWrap: 'wrap' }}>
+          <Button variant={activeTab === 'settings' ? 'primary' : 'outline'} onClick={() => setActiveTab('settings')}>General Settings</Button>
+          <Button variant={activeTab === 'flashnews' ? 'primary' : 'outline'} onClick={() => setActiveTab('flashnews')}>Flash News</Button>
+          <Button variant={activeTab === 'sponsors' ? 'primary' : 'outline'} onClick={() => setActiveTab('sponsors')}>Sponsors</Button>
+          <Button variant={activeTab === 'partners' ? 'primary' : 'outline'} onClick={() => setActiveTab('partners')}>Partners</Button>
         </div>
 
+        <div className="tab-content stagger-1">
+          {activeTab === 'settings' && <SettingsTab />}
+          {activeTab === 'flashnews' && <FlashNewsTab />}
+          {activeTab === 'sponsors' && <SponsorsTab />}
+          {activeTab === 'partners' && <PartnersTab />}
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { Building2 } from 'lucide-react';
 
 const SECTIONS = [
   {
@@ -11,6 +12,7 @@ const SECTIONS = [
   {
     title: 'Management',
     links: [
+      { path: '/admin/departments', label: 'Departments', icon: <Building2 size={18} /> },
       { path: '/admin/registrations', label: 'Registrations', icon: '📋' },
       { path: '/admin/teams', label: 'Teams', icon: '👥' },
       { path: '/admin/players', label: 'Players', icon: '🎮' },
@@ -24,6 +26,7 @@ const SECTIONS = [
       { path: '/admin/leaderboards', label: 'Leaderboards', icon: '📈' },
       { path: '/admin/be-points', label: 'BE Points', icon: '⭐' },
       { path: '/admin/certificates', label: 'Certificates', icon: '📜' },
+      { path: '/admin/achievements', label: 'Achievements', icon: '🌟' },
       { path: '/admin/hall-of-fame', label: 'Hall of Fame', icon: '🏛️' },
     ],
   },

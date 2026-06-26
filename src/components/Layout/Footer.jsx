@@ -4,8 +4,7 @@ import { useApp } from '../../context/AppContext';
 const QUICK_LINKS = [
   { path: '/tournaments', label: 'Tournaments' },
   { path: '/register', label: 'Register' },
-  { path: '/leaderboard', label: 'Leaderboard' },
-  { path: '/certificates', label: 'Certificates' },
+  { path: '/leaderboard', label: 'Leaderboard' }
 ];
 
 export default function Footer() {

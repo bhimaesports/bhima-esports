@@ -46,6 +46,7 @@ export default function AdminTeams() {
     motto: '',
   });
   const [logoFile, setLogoFile] = useState(null);
+  const [bannerFile, setBannerFile] = useState(null);
 
   const fetchTeams = async () => {
     try {
@@ -127,6 +128,7 @@ export default function AdminTeams() {
       motto: '',
     });
     setLogoFile(null);
+    setBannerFile(null);
     setTeamModalOpen(true);
   };
 
@@ -144,6 +146,7 @@ export default function AdminTeams() {
       motto: t.motto || '',
     });
     setLogoFile(null);
+    setBannerFile(null);
     setTeamModalOpen(true);
   };
 
@@ -160,6 +163,9 @@ export default function AdminTeams() {
     });
     if (logoFile) {
       data.append('logo', logoFile);
+    }
+    if (bannerFile) {
+      data.append('banner', bannerFile);
     }
 
     try {
@@ -466,19 +472,35 @@ export default function AdminTeams() {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Upload Team Logo</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setLogoFile(e.target.files[0]);
-                    }
-                  }}
-                  className="form-input"
-                  style={{ padding: '6px' }}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                <div className="form-group">
+                  <label className="form-label">Upload Team Logo</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setLogoFile(e.target.files[0]);
+                      }
+                    }}
+                    className="form-input"
+                    style={{ padding: '6px' }}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Upload Team Banner</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setBannerFile(e.target.files[0]);
+                      }
+                    }}
+                    className="form-input"
+                    style={{ padding: '6px' }}
+                  />
+                </div>
               </div>
 
               <div className="form-group">

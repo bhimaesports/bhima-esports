@@ -8,6 +8,7 @@ import {
   updateDeptLeaderboard,
 } from '../utils/pointCalculator.js';
 import { broadcastEvent } from './sse.js';
+import upload from '../middleware/upload.js';
 
 const router = Router();
 
@@ -71,27 +72,43 @@ router.get('/', (req, res) => {
 });
 
 // POST /api/matches - create match (admin)
-router.post('/', authenticate, (req, res) => {
+router.post('/', authenticate, upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'poster', maxCount: 1 }]), (req, res) => {
   try {
     const db = getDb();
-    const { tournament_id, match_number, date, status } = req.body;
+    const { tournament_id, match_number, date, time, venue, description, status } = req.body;
 
     if (!tournament_id || !match_number) {
-      return res.status(400).json({ error: 'tournament_id and match_number are required.' });
+      return res.status(400).json({ error: 'Tournament ID and Match Number are required.' });
     }
 
-    const tournament = db.get('SELECT id FROM tournaments WHERE id = ?', [Number(tournament_id)]);
-    if (!tournament) {
-      return res.status(404).json({ error: 'Tournament not found.' });
-    }
+    const thumbnail_url = req.files?.thumbnail ? `/uploads/${req.files.thumbnail[0].filename}` : null;
+    const poster_url = req.files?.poster ? `/uploads/${req.files.poster[0].filename}` : null;
 
     db.run(
-      'INSERT INTO matches (tournament_id, match_number, date, status) VALUES (?, ?, ?, ?)',
-      [Number(tournament_id), Number(match_number), date || null, status || 'upcoming']
+      `INSERT INTO matches (tournament_id, match_number, date, time, venue, description, status, thumbnail_url, poster_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        Number(tournament_id),
+        Number(match_number),
+        date || null,
+        time || null,
+        venue || null,
+        description || null,
+        status || 'upcoming',
+        thumbnail_url,
+        poster_url
+      ]
     );
 
     const id = db.getLastInsertRowId();
     const match = db.get('SELECT * FROM matches WHERE id = ?', [id]);
+    
+    if (req.admin && req.admin.admin_id) {
+      db.run(
+        'INSERT INTO admin_logs (admin_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+        [req.admin.admin_id, 'CREATE_MATCH', `Created match ${match_number} for tournament ${tournament_id}`, req.ip]
+      );
+    }
 
     res.status(201).json({ message: 'Match created successfully.', match });
   } catch (err) {
@@ -213,6 +230,80 @@ router.post('/:matchId/results', authenticate, (req, res) => {
     });
   } catch (err) {
     console.error('Enter results error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// PUT /api/matches/:id - update match (admin)
+router.put('/:id', authenticate, upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'poster', maxCount: 1 }]), (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+    const { tournament_id, match_number, date, time, venue, description, status } = req.body;
+
+    const match = db.get('SELECT * FROM matches WHERE id = ?', [Number(id)]);
+    if (!match) {
+      return res.status(404).json({ error: 'Match not found.' });
+    }
+
+    const thumbnail_url = req.files?.thumbnail ? `/uploads/${req.files.thumbnail[0].filename}` : match.thumbnail_url;
+    const poster_url = req.files?.poster ? `/uploads/${req.files.poster[0].filename}` : match.poster_url;
+
+    db.run(
+      `UPDATE matches SET
+         tournament_id = ?, match_number = ?, date = ?, time = ?, venue = ?, description = ?, status = ?, thumbnail_url = ?, poster_url = ?
+       WHERE id = ?`,
+      [
+        tournament_id ? Number(tournament_id) : match.tournament_id,
+        match_number ? Number(match_number) : match.match_number,
+        date !== undefined ? date : match.date,
+        time !== undefined ? time : match.time,
+        venue !== undefined ? venue : match.venue,
+        description !== undefined ? description : match.description,
+        status || match.status,
+        thumbnail_url,
+        poster_url,
+        Number(id)
+      ]
+    );
+
+    const updated = db.get('SELECT * FROM matches WHERE id = ?', [Number(id)]);
+    
+    if (req.admin && req.admin.admin_id) {
+      db.run(
+        'INSERT INTO admin_logs (admin_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+        [req.admin.admin_id, 'UPDATE_MATCH', `Updated match ${id}`, req.ip]
+      );
+    }
+    
+    broadcastEvent('entity_update', { entity: 'matches' });
+
+    res.json({ message: 'Match updated successfully.', match: updated });
+  } catch (err) {
+    console.error('Update match error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// DELETE /api/matches/:id - delete match (admin)
+router.delete('/:id', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+
+    const match = db.get('SELECT * FROM matches WHERE id = ?', [Number(id)]);
+    if (!match) return res.status(404).json({ error: 'Match not found.' });
+
+    db.transaction(() => {
+      db.run('DELETE FROM results WHERE match_id = ?', [Number(id)]);
+      db.run('DELETE FROM player_results WHERE match_id = ?', [Number(id)]);
+      db.run('DELETE FROM matches WHERE id = ?', [Number(id)]);
+    });
+
+    broadcastEvent('entity_update', { entity: 'matches' });
+    res.json({ message: 'Match deleted successfully.' });
+  } catch (err) {
+    console.error('Delete match error:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }
 });

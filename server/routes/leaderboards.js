@@ -173,7 +173,7 @@ router.put('/teams/:id', authenticate, (req, res) => {
   try {
     const db = getDb();
     const { id } = req.params;
-    const { matches, wins, total_kills, total_points } = req.body;
+    const { matches, wins, total_kills, total_points, is_qualified } = req.body;
 
     const entry = db.get('SELECT * FROM team_leaderboard WHERE id = ?', [Number(id)]);
     if (!entry) {
@@ -184,13 +184,14 @@ router.put('/teams/:id', authenticate, (req, res) => {
       `UPDATE team_leaderboard SET
          prev_points = total_points,
          prev_rank = current_rank,
-         matches = ?, wins = ?, total_kills = ?, total_points = ?
+         matches = ?, wins = ?, total_kills = ?, total_points = ?, is_qualified = ?
        WHERE id = ?`,
       [
         matches !== undefined ? Number(matches) : entry.matches,
         wins !== undefined ? Number(wins) : entry.wins,
         total_kills !== undefined ? Number(total_kills) : entry.total_kills,
         total_points !== undefined ? Number(total_points) : entry.total_points,
+        is_qualified !== undefined ? (is_qualified ? 1 : 0) : entry.is_qualified,
         Number(id),
       ]
     );
@@ -214,6 +215,41 @@ router.put('/teams/:id', authenticate, (req, res) => {
     res.json({ message: 'Leaderboard entry updated successfully.' });
   } catch (err) {
     console.error('Update team leaderboard error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// POST /api/leaderboards/teams - add team to leaderboard manually (admin)
+router.post('/teams', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const { team_id } = req.body;
+    
+    if (!team_id) return res.status(400).json({ error: 'team_id is required' });
+    
+    db.run('INSERT OR IGNORE INTO team_leaderboard (team_id) VALUES (?)', [Number(team_id)]);
+    db.transaction(() => { recalculateTeamRanks(); });
+    
+    broadcastEvent('leaderboard_updated', {});
+    res.json({ message: 'Team added to leaderboard successfully.' });
+  } catch (err) {
+    console.error('Add team leaderboard error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// DELETE /api/leaderboards/teams/:id - remove team from leaderboard manually (admin)
+router.delete('/teams/:id', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+    db.run('DELETE FROM team_leaderboard WHERE id = ?', [Number(id)]);
+    db.transaction(() => { recalculateTeamRanks(); });
+    
+    broadcastEvent('leaderboard_updated', {});
+    res.json({ message: 'Team removed from leaderboard.' });
+  } catch (err) {
+    console.error('Delete team leaderboard error:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }
 });
@@ -265,6 +301,191 @@ router.put('/departments/:id', authenticate, (req, res) => {
     res.json({ message: 'Leaderboard entry updated successfully.' });
   } catch (err) {
     console.error('Update dept leaderboard error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// POST /api/leaderboards/departments - add dept to leaderboard manually (admin)
+router.post('/departments', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const { department_id } = req.body;
+    
+    if (!department_id) return res.status(400).json({ error: 'department_id is required' });
+    
+    db.run('INSERT OR IGNORE INTO dept_leaderboard (department_id) VALUES (?)', [Number(department_id)]);
+    db.transaction(() => { updateDeptLeaderboard(); });
+    
+    broadcastEvent('leaderboard_updated', {});
+    res.json({ message: 'Department added to leaderboard successfully.' });
+  } catch (err) {
+    console.error('Add dept leaderboard error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// DELETE /api/leaderboards/departments/:id - remove dept from leaderboard manually (admin)
+router.delete('/departments/:id', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+    db.run('DELETE FROM dept_leaderboard WHERE id = ?', [Number(id)]);
+    db.transaction(() => { updateDeptLeaderboard(); });
+    
+    broadcastEvent('leaderboard_updated', {});
+    res.json({ message: 'Department removed from leaderboard.' });
+  } catch (err) {
+    console.error('Delete dept leaderboard error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// GET /api/leaderboards/players - get player leaderboard entries
+router.get('/players', (req, res) => {
+  try {
+    const db = getDb();
+    const { tournament_id, department_id, season, search } = req.query;
+    
+    let sql = `
+      SELECT pl.*, p.name, p.uid, p.role, t.name as team_name, d.code as department_code, tr.name as tournament_name
+      FROM player_leaderboard pl
+      JOIN players p ON pl.player_id = p.id
+      LEFT JOIN teams t ON p.team_id = t.id
+      LEFT JOIN departments d ON p.department_id = d.id OR pl.department_id = d.id
+      LEFT JOIN tournaments tr ON pl.tournament_id = tr.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (tournament_id) {
+      sql += ' AND pl.tournament_id = ?';
+      params.push(Number(tournament_id));
+    }
+    if (department_id) {
+      sql += ' AND pl.department_id = ?';
+      params.push(Number(department_id));
+    }
+    if (season) {
+      sql += ' AND pl.season = ?';
+      params.push(season);
+    }
+    if (search) {
+      sql += ' AND p.name LIKE ?';
+      params.push(`%${search}%`);
+    }
+
+    sql += ' ORDER BY pl.total_points DESC, pl.kills DESC';
+
+    const leaderboard = db.all(sql, params);
+    res.json({ leaderboard });
+  } catch (err) {
+    console.error('Player leaderboard error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// POST /api/leaderboards/players - Add Player to Leaderboard
+router.post('/players', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const { player_id, tournament_id, department_id, season } = req.body;
+    
+    if (!player_id) return res.status(400).json({ error: 'Player ID is required' });
+
+    // Ensure no duplicate entry for the same tournament/season
+    const existing = db.get(
+      'SELECT id FROM player_leaderboard WHERE player_id = ? AND tournament_id IS ? AND season IS ?',
+      [player_id, tournament_id || null, season || null]
+    );
+
+    if (existing) {
+      return res.status(400).json({ error: 'Player is already on this leaderboard.' });
+    }
+
+    // Initialize with current player stats or 0
+    const player = db.get('SELECT kills, wins, matches_played, total_points FROM players WHERE id = ?', [player_id]);
+
+    db.run(
+      `INSERT INTO player_leaderboard (player_id, tournament_id, department_id, season, matches, wins, total_kills, total_points)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        player_id, 
+        tournament_id || null, 
+        department_id || null, 
+        season || null,
+        player?.matches_played || 0,
+        player?.wins || 0,
+        player?.kills || 0,
+        player?.total_points || 0
+      ]
+    );
+
+    broadcastEvent('entity_update', { type: 'leaderboards' });
+    res.json({ message: 'Player added to leaderboard.' });
+  } catch (err) {
+    console.error('Add player leaderboard error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// PUT /api/leaderboards/players/:id - Update player leaderboard entry
+router.put('/players/:id', authenticate, async (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+    const { matches, wins, total_kills, total_points, tournament_id, department_id, season } = req.body;
+
+    const entry = db.get('SELECT * FROM player_leaderboard WHERE id = ?', [Number(id)]);
+    if (!entry) return res.status(404).json({ error: 'Entry not found.' });
+
+    db.run(`
+      UPDATE player_leaderboard SET
+        matches = ?, wins = ?, total_kills = ?, total_points = ?,
+        tournament_id = ?, department_id = ?, season = ?
+      WHERE id = ?
+    `, [
+      matches !== undefined ? Number(matches) : entry.matches,
+      wins !== undefined ? Number(wins) : entry.wins,
+      total_kills !== undefined ? Number(total_kills) : entry.total_kills,
+      total_points !== undefined ? Number(total_points) : entry.total_points,
+      tournament_id || entry.tournament_id,
+      department_id || entry.department_id,
+      season || entry.season,
+      Number(id)
+    ]);
+
+    // Also trigger global recalculation in case this affects overall standings (optional, but good practice)
+    const { recalculateAllPoints } = await import('../utils/pointCalculator.js');
+    recalculateAllPoints();
+
+    broadcastEvent('entity_update', { type: 'leaderboards' });
+    res.json({ message: 'Player leaderboard updated.' });
+  } catch (err) {
+    console.error('Update player leaderboard error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// DELETE /api/leaderboards/players/:id - Remove player from leaderboard
+router.delete('/players/:id', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    db.run('DELETE FROM player_leaderboard WHERE id = ?', [Number(req.params.id)]);
+    broadcastEvent('entity_update', { type: 'leaderboards' });
+    res.json({ message: 'Player removed from leaderboard.' });
+  } catch(err) {
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// POST /api/leaderboards/players/reset - Reset player leaderboard
+router.post('/players/reset', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    db.run('DELETE FROM player_leaderboard');
+    broadcastEvent('entity_update', { type: 'leaderboards' });
+    res.json({ message: 'Player leaderboard has been reset.' });
+  } catch(err) {
     res.status(500).json({ error: 'Internal server error.' });
   }
 });

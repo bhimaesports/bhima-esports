@@ -26,3 +26,14 @@ dist-ssr
 # Database and backups
 server/db/*.sqlite
 server/db/backups/
+
+# Environment files
+.env
+.env.*
+
+# Uploads
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Temporary folder
+scratch/

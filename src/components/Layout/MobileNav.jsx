@@ -94,31 +94,7 @@ export default function MobileNav({ isOpen, onClose, links }) {
             );
           })}
 
-          {isAdmin && (
-            <Link
-              to="/admin"
-              onClick={onClose}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                margin: '1rem 1.5rem',
-                padding: '0.625rem 1rem',
-                background: 'var(--neon)',
-                color: 'var(--bg-primary)',
-                borderRadius: 'var(--radius-md)',
-                fontFamily: 'var(--font-heading)',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                textAlign: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              ⚡ Admin Panel
-            </Link>
-          )}
+
         </nav>
       </div>
     </>

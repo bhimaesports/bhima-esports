@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { getDb } from '../db/schema.js';
 import { authenticate } from '../middleware/auth.js';
+import upload from '../middleware/upload.js';
 import { broadcastEvent } from './sse.js';
+import bcrypt from 'bcryptjs';
 
 const router = Router();
 
@@ -9,7 +11,7 @@ const router = Router();
 router.get('/', (req, res) => {
   try {
     const db = getDb();
-    const { team_id, department_id, status, search, page = 1, limit = 50 } = req.query;
+    const { team_id, department_id, status, approval_status, search, page = 1, limit = 50 } = req.query;
 
     let sql = `
       SELECT p.*, d.name as department_name, d.code as department_code,
@@ -32,6 +34,10 @@ router.get('/', (req, res) => {
     if (status) {
       sql += ' AND p.status = ?';
       params.push(status);
+    }
+    if (approval_status) {
+      sql += ' AND p.approval_status = ?';
+      params.push(approval_status);
     }
     if (search) {
       sql += ' AND (p.name LIKE ? OR p.roll_number LIKE ? OR p.uid LIKE ?)';
@@ -64,10 +70,10 @@ router.get('/', (req, res) => {
 });
 
 // POST /api/players - create player (admin)
-router.post('/', authenticate, (req, res) => {
+router.post('/', authenticate, upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'jersey', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), (req, res) => {
   try {
     const db = getDb();
-    const { name, department_id, team_id, uid, year, roll_number } = req.body;
+    const { name, department_id, team_id, uid, year, roll_number, real_name, role, country, player_login_id, password } = req.body;
 
     if (!name || !department_id) {
       return res.status(400).json({ error: 'Name and department_id are required.' });
@@ -87,11 +93,21 @@ router.post('/', authenticate, (req, res) => {
       }
     }
 
+    const photo_url = req.files?.photo ? `/uploads/${req.files.photo[0].filename}` : null;
+    const jersey_url = req.files?.jersey ? `/uploads/${req.files.jersey[0].filename}` : null;
+    const banner_url = req.files?.banner ? `/uploads/${req.files.banner[0].filename}` : null;
+
+    let password_hash = null;
+    if (password) {
+      password_hash = bcrypt.hashSync(password, 10);
+    }
+
     db.run(
-      `INSERT INTO players (name, department_id, team_id, uid, year, roll_number)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO players (name, department_id, team_id, uid, year, roll_number, real_name, role, country, player_login_id, password_hash, photo_url, jersey_url, banner_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [name, Number(department_id), team_id ? Number(team_id) : null,
-       uid || null, year ? Number(year) : null, roll_number || null]
+       uid || null, year ? Number(year) : null, roll_number || null, real_name || null, role || null, country || null,
+       player_login_id || null, password_hash, photo_url, jersey_url, banner_url]
     );
 
     const id = db.getLastInsertRowId();
@@ -107,7 +123,7 @@ router.post('/', authenticate, (req, res) => {
 });
 
 // PUT /api/players/:id - update player (admin)
-router.put('/:id', authenticate, (req, res) => {
+router.put('/:id', authenticate, upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'jersey', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), (req, res) => {
   try {
     const db = getDb();
     const { id } = req.params;
@@ -116,12 +132,19 @@ router.put('/:id', authenticate, (req, res) => {
       return res.status(404).json({ error: 'Player not found.' });
     }
 
-    const { name, department_id, team_id, uid, year, roll_number, kills, wins, matches_played, mvp_awards } = req.body;
+    const { name, department_id, team_id, uid, year, roll_number, kills, wins, matches_played, mvp_awards, real_name, role, country, total_damage, headshot_percentage, average_survival_time, total_points, booyahs } = req.body;
+
+    const photo_url = req.files?.photo ? `/uploads/${req.files.photo[0].filename}` : player.photo_url;
+    const jersey_url = req.files?.jersey ? `/uploads/${req.files.jersey[0].filename}` : player.jersey_url;
+    const banner_url = req.files?.banner ? `/uploads/${req.files.banner[0].filename}` : player.banner_url;
 
     db.run(
       `UPDATE players SET
          name = ?, department_id = ?, team_id = ?, uid = ?, year = ?,
-         roll_number = ?, kills = ?, wins = ?, matches_played = ?, mvp_awards = ?
+         roll_number = ?, kills = ?, wins = ?, matches_played = ?, mvp_awards = ?,
+         real_name = ?, role = ?, country = ?, total_damage = ?, headshot_percentage = ?,
+         average_survival_time = ?, total_points = ?, booyahs = ?,
+         photo_url = ?, jersey_url = ?, banner_url = ?
        WHERE id = ?`,
       [
         name || player.name,
@@ -134,13 +157,29 @@ router.put('/:id', authenticate, (req, res) => {
         wins !== undefined ? Number(wins) : player.wins,
         matches_played !== undefined ? Number(matches_played) : player.matches_played,
         mvp_awards !== undefined ? Number(mvp_awards) : player.mvp_awards,
+        real_name ?? player.real_name,
+        role ?? player.role,
+        country ?? player.country,
+        total_damage !== undefined ? Number(total_damage) : player.total_damage,
+        headshot_percentage !== undefined ? Number(headshot_percentage) : player.headshot_percentage,
+        average_survival_time !== undefined ? Number(average_survival_time) : player.average_survival_time,
+        total_points !== undefined ? Number(total_points) : player.total_points,
+        booyahs !== undefined ? Number(booyahs) : player.booyahs,
+        photo_url,
+        jersey_url,
+        banner_url,
         Number(id),
       ]
     );
 
     const updated = db.get('SELECT * FROM players WHERE id = ?', [Number(id)]);
     
+    // Auto recalculate points when stats change
+    const { recalculateAllPoints } = await import('../utils/pointCalculator.js');
+    recalculateAllPoints();
+
     broadcastEvent('entity_update', { entity: 'players' });
+    broadcastEvent('entity_update', { type: 'leaderboards' });
     
     res.json({ message: 'Player updated successfully.', player: updated });
   } catch (err) {
@@ -263,6 +302,71 @@ router.patch('/:id/transfer', authenticate, (req, res) => {
   }
 });
 
+// PATCH /api/players/:id/approval - approve/reject registration
+router.patch('/:id/approval', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+    const { approval_status } = req.body;
+
+    if (!['pending', 'approved', 'rejected'].includes(approval_status)) {
+      return res.status(400).json({ error: 'Invalid approval status.' });
+    }
+
+    const player = db.get('SELECT * FROM players WHERE id = ?', [Number(id)]);
+    if (!player) return res.status(404).json({ error: 'Player not found.' });
+
+    db.run('UPDATE players SET approval_status = ? WHERE id = ?', [approval_status, Number(id)]);
+    
+    broadcastEvent('entity_update', { entity: 'players' });
+    res.json({ message: `Player registration ${approval_status}.` });
+  } catch (err) {
+    console.error('Approval error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// PATCH /api/players/:id/credentials - update player login id / reset password
+router.patch('/:id/credentials', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+    const { player_login_id, password } = req.body;
+
+    const player = db.get('SELECT * FROM players WHERE id = ?', [Number(id)]);
+    if (!player) return res.status(404).json({ error: 'Player not found.' });
+
+    const updates = [];
+    const params = [];
+
+    if (player_login_id && player_login_id !== player.player_login_id) {
+      const existing = db.get('SELECT id FROM players WHERE player_login_id = ? AND id != ?', [player_login_id, Number(id)]);
+      if (existing) return res.status(409).json({ error: 'Player ID already taken.' });
+      updates.push('player_login_id = ?');
+      params.push(player_login_id);
+    }
+
+    if (password) {
+      if (password.length < 6) return res.status(400).json({ error: 'Password too short.' });
+      const hash = bcrypt.hashSync(password, 10);
+      updates.push('password_hash = ?');
+      params.push(hash);
+    }
+
+    if (updates.length > 0) {
+      params.push(Number(id));
+      db.run(`UPDATE players SET ${updates.join(', ')} WHERE id = ?`, params);
+      broadcastEvent('entity_update', { entity: 'players' });
+      res.json({ message: 'Credentials updated successfully.' });
+    } else {
+      res.status(400).json({ error: 'No changes provided.' });
+    }
+  } catch (err) {
+    console.error('Credentials error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
 // GET /api/players/:id/analytics - get detailed analytics for a player
 router.get('/:id/analytics', authenticate, (req, res) => {
   try {
@@ -306,9 +410,16 @@ router.get('/:id/analytics', authenticate, (req, res) => {
       };
     });
 
+    // Fetch achievements/certificates
+    const certificates = db.all(
+      `SELECT * FROM certificates WHERE player_id = ? AND status = 'active' ORDER BY issued_date DESC`,
+      [Number(id)]
+    );
+
     res.json({
       player,
-      matchHistory: killsProgression
+      matchHistory: killsProgression,
+      certificates
     });
   } catch (err) {
     console.error('Player analytics error:', err);
