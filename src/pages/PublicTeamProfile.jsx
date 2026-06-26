@@ -7,8 +7,8 @@ import {
 } from 'recharts';
 import { Shield, Target, Crosshair, Users, Activity, Trophy, Medal, Star, TrendingUp, Award, Swords, ChevronRight, Zap, Crown, Flame } from 'lucide-react';
 import api from '../utils/api';
-import Button from '../components/ui/Button';
-import Card from '../components/ui/Card';
+import Button from '../components/UI/Button';
+import Card from '../components/UI/Card';
 
 const chartTooltipStyle = {
   backgroundColor: 'rgba(5, 5, 5, 0.95)',
